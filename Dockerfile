@@ -9,7 +9,7 @@ WORKDIR /app
 COPY . .
 
 # Install project dependencies
-#RUN apk add gcc musl-dev mariadb-connector-c-dev pkgconf
+RUN apk add --no-cache gcc musl-dev postgresql-libs
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Run the web service on container startup.
