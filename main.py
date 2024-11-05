@@ -143,7 +143,6 @@ class FormData:
 # Inicializar app y router
 router = APIRouter()
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None)
-app = FastAPI()
 
 # Mostrar página de error en vez de error en JSON
 @app.exception_handler(StarletteHTTPException)
