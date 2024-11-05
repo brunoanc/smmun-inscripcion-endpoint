@@ -21,7 +21,7 @@ import time
 import datetime
 
 # URL de la página estática
-URL_BASE = "https://brunoancona.me"
+URL_BASE = "http://localhost:8080"
 
 # Clase para los datos de PostgreSQL
 class DelegacionSM(SQLModel, table=True): # type: ignore
