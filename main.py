@@ -157,7 +157,8 @@ app.add_middleware(
         "http://localhost",
         "http://localhost:8080",
         "https://smmun.com",
-        "https://smmun0.github.io"
+        "https://smmun0.github.io",
+        URL_BASE
     ],
     allow_credentials=True,
     allow_methods=["POST"],
