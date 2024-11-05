@@ -9,7 +9,7 @@ WORKDIR /app
 COPY . .
 
 # Install project dependencies
-RUN apk add --no-cache gcc musl-dev postgresql-libs
+RUN apk add --no-cache gcc musl-dev postgresql-dev
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Run the web service on container startup.
