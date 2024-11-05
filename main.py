@@ -157,9 +157,7 @@ app.add_middleware(
         "http://localhost",
         "http://localhost:8080",
         "https://smmun.com",
-        "https://smmun0.github.io",
-        "https://brunoancona.me",
-        "https://brunoanc.github.io"
+        "https://smmun0.github.io"
     ],
     allow_credentials=True,
     allow_methods=["POST"],
