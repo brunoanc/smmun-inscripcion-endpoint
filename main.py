@@ -1,5 +1,5 @@
 from typing import Annotated, Optional, cast
-from fastapi import FastAPI, APIRouter, Form, File, UploadFile, Depends, status, BackgroundTasks
+from fastapi import FastAPI, APIRouter, Form, File, UploadFile, Depends, status, BackgroundTasks, Request
 from fastapi.responses import RedirectResponse
 from sqlmodel import Field, Session, SQLModel, create_engine
 from pydantic import EmailStr
@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from google.oauth2 import service_account
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.discovery import build
+from starlette.datastructures import FormData
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,78 +21,14 @@ import pathlib
 import time
 import datetime
 
+
 # URL de la página estática
 URL_BASE = "https://jellyfish-app-iyb7k.ondigitalocean.app"
 
-# Clase para los datos de PostgreSQL
-class DelegacionSM(SQLModel, table=True): # type: ignore
-    id: int | None = Field(default = None, primary_key=True)
-    fecha: datetime.datetime = Field(default_factory=datetime.datetime.now, index=True)
-    codelegacion: bool
-    delegacion_oficial: str | None
-    responsable_delegacion_oficial: str | None
 
-    nombre: str
-    apellido: str
-    edad: int
-    celular: str
-    correo: str
-    pais: str
-    ciudad_estado: str
-    escolaridad: str
-    escuela: str
-    contacto_emergencia: str
-    info_extra: str | None
-
-    nombre_co: str | None
-    apellido_co: str | None
-    edad_co: int | None
-    celular_co: str | None
-    correo_co: str | None
-    pais_co: str | None
-    ciudad_estado_co: str | None
-    escolaridad_co: str | None
-    escuela_co: str | None
-    contacto_emergencia_co: str | None
-    info_extra_co: str | None
-
-    comite_1: str = Field(index=True)
-    comite_1_opcion_1: str
-    comite_1_opcion_2: str
-    comite_1_opcion_3: str | None
-
-    comite_2: str = Field(index=True)
-    comite_2_opcion_1: str
-    comite_2_opcion_2: str
-    comite_2_opcion_3: str | None
-
-    comite_3: str = Field(index=True)
-    comite_3_opcion_1: str
-    comite_3_opcion_2: str
-    comite_3_opcion_3: str | None
-
-# Conectar con la base de datos
-db_url = os.environ["DATABASE_URL"]
-engine = create_engine(db_url)
-
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
-
-def get_session():
-    with Session(engine) as session:
-        yield session
-
-SessionDep = Annotated[Session, Depends(get_session)]
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    create_db_and_tables()
-    yield
-
-# Clase para recibir y validar el forms
+# Clase para recibir y validar el forms de delegaciones
 @dataclass
-class FormData:
+class DelegacionFormData:
     modalidad: str = Form(pattern=r"^(individual|pareja)$")
     delegacion_oficial: str = Form(pattern=r"^(si|no)$")
     nombre_delegacion_oficial: Optional[str] = Form(None, max_length=150)
@@ -140,15 +77,114 @@ class FormData:
     comite_2_pais_1: str = Form(max_length=150)
     comite_2_pais_2: Optional[str] = Form(None, max_length=150)
 
+
+@dataclass
+class FacultyFormData:
+    institucion_delegacion_oficial: str = Form(max_length=150)
+    nombre_faculty: str = Form(max_length=150)
+    apellido_faculty: str = Form(max_length=150)
+    celular_faculty: str = Form(max_length=150)
+    correo_faculty: EmailStr = Form(max_length=150)
+    ciudad_estado_faculty: str = Form(max_length=150)
+    pais_faculty: str = Form(max_length=150)
+    numero_delegaciones: str = Form(max_length=2)
+
+
+# Clase para los datos de PostgreSQL de delegación
+class DelegacionSM(SQLModel, table=True): # type: ignore
+    id: int | None = Field(default = None, primary_key=True)
+    fecha: datetime.datetime = Field(default_factory=datetime.datetime.now, index=True)
+    codelegacion: bool
+    delegacion_oficial: str | None
+    responsable_delegacion_oficial: str | None
+
+    nombre: str
+    apellido: str
+    edad: int
+    celular: str
+    correo: str
+    pais: str
+    ciudad_estado: str
+    escolaridad: str
+    escuela: str
+    contacto_emergencia: str
+    info_extra: str | None
+
+    nombre_co: str | None
+    apellido_co: str | None
+    edad_co: int | None
+    celular_co: str | None
+    correo_co: str | None
+    pais_co: str | None
+    ciudad_estado_co: str | None
+    escolaridad_co: str | None
+    escuela_co: str | None
+    contacto_emergencia_co: str | None
+    info_extra_co: str | None
+
+    comite_1: str = Field(index=True)
+    comite_1_opcion_1: str
+    comite_1_opcion_2: str
+    comite_1_opcion_3: str | None
+
+    comite_2: str = Field(index=True)
+    comite_2_opcion_1: str
+    comite_2_opcion_2: str
+    comite_2_opcion_3: str | None
+
+    comite_3: str = Field(index=True)
+    comite_3_opcion_1: str
+    comite_3_opcion_2: str
+    comite_3_opcion_3: str | None
+
+
+# Clase para los datos de PostgreSQL de faculty
+class FacultySM(SQLModel, table=True): # type: ignore
+    id: int | None = Field(default = None, primary_key=True)
+    fecha: datetime.datetime = Field(default_factory=datetime.datetime.now, index=True)
+
+    institucion_delegacion_oficial: str
+    nombre_faculty: str
+    apellido_faculty: str
+    celular_faculty: str
+    correo_faculty: str
+    ciudad_estado_faculty: str
+    pais_faculty: str
+
+    numero_delegaciones: int
+
+
+# Conectar con la base de datos
+db_url = os.environ["DATABASE_URL"]
+engine = create_engine(db_url)
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+SessionDep = Annotated[Session, Depends(get_session)]
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
+
+
 # Inicializar app y router
 router = APIRouter()
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None)
+
 
 # Mostrar página de error en vez de error en JSON
 @app.exception_handler(StarletteHTTPException)
 @app.exception_handler(RequestValidationError)
 async def http_exception_handler(request, exc):
     return RedirectResponse(f"{URL_BASE}/error-registro/", status_code=status.HTTP_303_SEE_OTHER)
+
 
 # CORS
 app.add_middleware(
@@ -165,7 +201,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 google_credentials = service_account.Credentials.from_service_account_file("sheets-api-440213-9411d3edc882.json", scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"])
+
 
 def comite_corto_a_largo(comite):
     match comite:
@@ -191,6 +229,7 @@ def comite_corto_a_largo(comite):
             return "Comité Olímpico Internacional (COI)"
         case _:
             return comite
+
 
 def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
     # Subir comprobante a drive
@@ -295,9 +334,152 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
         smtp.sendmail(msg["From"], msg["From"], msg.as_string())
 
 
+def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comprobante: UploadFile):
+    # Subir comprobante a drive
+    service = build("drive", "v3", credentials=google_credentials)
+
+    file_metadata = {
+        "name": f"FACULTY_{inscripcion.institucion_delegacion_oficial}_{int(time.time())}{pathlib.Path(cast(str, comprobante.filename)).suffix}",
+        "parents": ["1yhuaWkBRT6rdgUPTCdvfmumay5Fkuowp"]
+    }
+
+    media = MediaIoBaseUpload(comprobante.file, mimetype=comprobante.content_type, chunksize=-1)
+    file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    link_comprobante = f"https://drive.google.com/file/d/{file.get('id')}"
+
+    # Añadir nueva página al sheets
+    service = build("sheets", "v4", credentials=google_credentials)
+    title = f"{inscripcion.institucion_delegacion_oficial}_{int(time.time())}"
+    body = {
+        "requests": {
+            "addSheet": {
+                "properties": {
+                    "title": title
+                }
+            }
+        }
+    }
+
+    service.spreadsheets().batchUpdate(spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg", body=body).execute()
+
+    # Añadir valores a la tabla general
+    body = {
+        "values": [
+            [
+                False,
+                inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
+                inscripcion.institucion_delegacion_oficial,
+                inscripcion.numero_delegaciones,
+                inscripcion.nombre_faculty,
+                inscripcion.apellido_faculty,
+                inscripcion.celular_faculty,
+                inscripcion.correo_faculty,
+                inscripcion.pais_faculty,
+                inscripcion.ciudad_estado_faculty,
+                link_comprobante
+            ]
+        ]
+    }
+
+    service.spreadsheets().values().append(
+        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        range=f"A1:K1",
+        valueInputOption="USER_ENTERED",
+        body=body
+    ).execute()
+
+    # Añadir valores al sheets
+    body = {
+        "values": [
+            [
+                inscripcion.institucion_delegacion_oficial,
+            ],
+            [
+                "Nombre:",
+                f"{inscripcion.nombre_faculty} {inscripcion.apellido_faculty}",
+            ],
+            [
+                "Celular:",
+                inscripcion.celular_faculty
+            ],
+            [
+                "Correo:",
+                inscripcion.correo_faculty
+            ],
+            [
+                "Lugar de residencia:",
+                f"{inscripcion.ciudad_estado_faculty}, {inscripcion.pais_faculty}"
+            ],
+            [
+                "Número de delegaciones:",
+                inscripcion.numero_delegaciones
+            ],
+            [
+                "Fecha de inscripción",
+                inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S")
+            ],
+            [
+                "Comprobante de pago:",
+                link_comprobante
+            ],
+            [],
+            [
+                "Nombre",
+                "Apellido",
+                "Edad",
+                "Celular",
+                "Correo",
+                "Lugar de residencia",
+                "Escolaridad",
+                "Escuela"
+            ]
+        ]
+    }
+
+    for i in range(inscripcion.numero_delegaciones):
+        body["values"].append([
+            data.get(f"nombre_{i}"),
+            data.get(f"apellido_{i}"),
+            data.get(f"edad_{i}"),
+            data.get(f"celular_{i}"),
+            data.get(f"correo_{i}"),
+            f"{data.get(f'ciudad_estado_{i}')}, {data.get(f'pais_{i}')}",
+            data.get(f"escolaridad_{i}"),
+            data.get(f"escuela_{i}")
+        ])
+
+    service.spreadsheets().values().append(
+        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        range=f"{title}!A1:H1",
+        valueInputOption="USER_ENTERED",
+        body=body
+    ).execute()
+
+    # Mandar correo
+    msg = MIMEMultipart()
+    msg["From"] = "secretariadefinanzas@smmun.com"
+    msg["To"] = inscripcion.correo_faculty
+    msg["Subject"] = "¡Gracias! - SMMUN 2025: Legado de Líderes"
+    msg["Date"] = formatdate(localtime=True)
+
+    html = f'<!doctypehtml><html dir=auto lang=und xmlns=http://www.w3.org/1999/xhtml xmlns:o=urn:schemas-microsoft-com:office:office xmlns:v=urn:schemas-microsoft-com:vml><title></title><!--[if !mso]><!--><meta content="IE=edge"http-equiv=X-UA-Compatible><!--<![endif]--><meta content="text/html; charset=UTF-8"http-equiv=Content-Type><meta content="width=device-width,initial-scale=1"name=viewport><style>#outlook a{{padding:0}}body{{margin:0;padding:0;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}}table,td{{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0}}img{{border:0;height:auto;line-height:100%;outline:0;text-decoration:none;-ms-interpolation-mode:bicubic}}p{{display:block;margin:13px 0}}</style><!--[if mso]><noscript><xml><o:officedocumentsettings><o:allowpng><o:pixelsperinch>96</o:pixelsperinch></o:officedocumentsettings></xml></noscript><![endif]--><!--[if lte mso 11]><style>.mj-outlook-group-fix{{width:100%!important}}</style><![endif]--><!--[if !mso]><!--><link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700"rel=stylesheet><link href=https://fonts.cdnfonts.com/css/glacial-indifference-2 rel=stylesheet><style>@import url(https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700);@import url(https://fonts.cdnfonts.com/css/glacial-indifference-2);</style><!--<![endif]--><style>@media only screen and (min-width:480px){{.mj-column-per-100{{width:100%!important;max-width:100%}}.mj-column-per-40{{width:40%!important;max-width:40%}}.mj-column-per-60{{width:60%!important;max-width:60%}}}}</style><style media="screen and (min-width:480px)">.moz-text-html .mj-column-per-100{{width:100%!important;max-width:100%}}.moz-text-html .mj-column-per-40{{width:40%!important;max-width:40%}}.moz-text-html .mj-column-per-60{{width:60%!important;max-width:60%}}</style><body style=word-spacing:normal;background-color:#eee><div style=background-color:#eee dir=auto lang=und><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><v:image style=border:0;mso-position-horizontal:center;position:absolute;top:0;width:600px;z-index:-3 src=https://smmun.com/assets/img/images/header.png xmlns:v=urn:schemas-microsoft-com:vml><![endif]--><div style="margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=width:100%><tr style=vertical-align:top><td style="background:#8d7abb url(https://smmun.com/assets/img/images/header.png) no-repeat center center/cover;background-position:center center;background-repeat:no-repeat;padding:12% 0;vertical-align:top;height:-24px"background=https://smmun.com/assets/img/images/header.png height=-24><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 style=width:600px width=600><tr><td><![endif]--><div style="margin:0 auto"class=mj-hero-content><table border=0 cellpadding=0 cellspacing=0 role=presentation style=width:100%;margin:0><tr><td><table border=0 cellpadding=0 cellspacing=0 role=presentation style=width:100%;margin:0><tbody></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:20px 0;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:600px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:10px 25px;word-break:break-word"align=left><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:1;text-align:left;color:#555"><h1>¡Muchas gracias!</h1>Hemos recibido la inscripción. Le haremos llegar cuanto antes la confirmación de los datos de la Delegación Oficial por medio de correo electrónico, así como la imagen que las delegaciones necesitarán para realizar su registro.<br><br>¡Cada vez más cerca de la Décima Edición del SMMUN: Legado de Líderes!<br><br>Gracias por su confianza.</div></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Delegación oficial</div></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=width:550px><![endif]--><div style=font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr class="mj-outlook-group-fix mj-column-per-100"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:middle;width:220px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:40% class="mj-outlook-group-fix mj-column-per-40"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="border-right:1px dashed #d3d3d3;vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Institución o agrupación</div></table></table></div><!--[if mso | IE]><td style=vertical-align:middle;width:330px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:60% class="mj-outlook-group-fix mj-column-per-60"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:1;text-align:center;color:#555">{inscripcion.institucion_delegacion_oficial}</div></table></table></div><!--[if mso | IE]><![endif]--></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=width:550px><![endif]--><div style=font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr class="mj-outlook-group-fix mj-column-per-100"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:middle;width:220px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:40% class="mj-outlook-group-fix mj-column-per-40"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="border-right:1px dashed #d3d3d3;vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Número de delegaciones</div></table></table></div><!--[if mso | IE]><td style=vertical-align:middle;width:330px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:60% class="mj-outlook-group-fix mj-column-per-60"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:1;text-align:center;color:#555">{inscripcion.numero_delegaciones}</div></table></table></div><!--[if mso | IE]><![endif]--></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Información de contacto</div></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=width:550px><![endif]--><div style=font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr class="mj-outlook-group-fix mj-column-per-100"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:middle;width:220px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:40% class="mj-outlook-group-fix mj-column-per-40"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="border-right:1px dashed #d3d3d3;vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Nombre completo</div></table></table></div><!--[if mso | IE]><td style=vertical-align:middle;width:330px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:60% class="mj-outlook-group-fix mj-column-per-60"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:1;text-align:center;color:#555">{inscripcion.nombre_faculty} {inscripcion.apellido_faculty}</div></table></table></div><!--[if mso | IE]><![endif]--></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=width:550px><![endif]--><div style=font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr class="mj-outlook-group-fix mj-column-per-100"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:middle;width:220px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:40% class="mj-outlook-group-fix mj-column-per-40"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="border-right:1px dashed #d3d3d3;vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Número de celular</div></table></table></div><!--[if mso | IE]><td style=vertical-align:middle;width:330px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:60% class="mj-outlook-group-fix mj-column-per-60"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:1;text-align:center;color:#555">{inscripcion.celular_faculty}</div></table></table></div><!--[if mso | IE]><![endif]--></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=width:550px><![endif]--><div style=font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr class="mj-outlook-group-fix mj-column-per-100"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:middle;width:220px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:40% class="mj-outlook-group-fix mj-column-per-40"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="border-right:1px dashed #d3d3d3;vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Correo electrónico</div></table></table></div><!--[if mso | IE]><td style=vertical-align:middle;width:330px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:60% class="mj-outlook-group-fix mj-column-per-60"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:1;text-align:center;color:#555">{inscripcion.correo_faculty}</div></table></table></div><!--[if mso | IE]><![endif]--></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=width:550px><![endif]--><div style=font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr class="mj-outlook-group-fix mj-column-per-100"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:middle;width:220px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:40% class="mj-outlook-group-fix mj-column-per-40"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="border-right:1px dashed #d3d3d3;vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;font-weight:700;line-height:1;text-align:center;color:#555">Lugar de residencia</div></table></table></div><!--[if mso | IE]><td style=vertical-align:middle;width:330px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:60% class="mj-outlook-group-fix mj-column-per-60"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:middle;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:15px 0;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:1;text-align:center;color:#555">{inscripcion.ciudad_estado_faculty}, {inscripcion.pais_faculty}</div></table></table></div><!--[if mso | IE]><![endif]--></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:0 25px;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:550px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style=font-size:0;padding:0;word-break:break-word align=center><p style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:100%"></p><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=522px align=center style="border-top:dashed 1px #d3d3d3;font-size:1px;margin:0 auto;width:522px"><tr><td style=height:0;line-height:0> </table><![endif]--></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px bgcolor=#ffffff><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="background:#fff;background-color:#fff;margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=background:#fff;background-color:#fff;width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:20px 0;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:600px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:10px 25px;word-break:break-word"align=center><table border=0 cellpadding=0 cellspacing=0 role=presentation style=border-collapse:separate;line-height:100%><tr><td style="border:none;border-radius:3px;cursor:auto;mso-padding-alt:10px 25px;background:#8d7abb"align=center bgcolor=#8d7abb role=presentation valign=middle><a href=https://wa.me/529991975309 style="display:inline-block;background:#8d7abb;color:#fff;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-size:13px;font-weight:400;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:10px 25px;mso-padding-alt:0;border-radius:3px"target=_blank>¿Dudas? ¡Contáctanos!</a></table></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation width=600 align=center style=width:600px><tr><td style=line-height:0;font-size:0;mso-line-height-rule:exactly><![endif]--><div style="margin:0 auto;max-width:600px"><table border=0 cellpadding=0 cellspacing=0 role=presentation style=width:100% align=center><tr><td style="direction:ltr;font-size:0;padding:20px 0;text-align:center"><!--[if mso | IE]><table border=0 cellpadding=0 cellspacing=0 role=presentation><tr><td style=vertical-align:top;width:600px><![endif]--><div style=font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100% class="mj-outlook-group-fix mj-column-per-100"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="vertical-align:top;padding:0 14px"><table border=0 cellpadding=0 cellspacing=0 role=presentation width=100%><tr><td style="font-size:0;padding:10px 25px;word-break:break-word"align=center><div style="font-family:Glacial Indifference,Helvetica,Arial;font-size:14px;line-height:16px;text-align:center;color:#555">Modelo de Naciones Unidas del Sureste Mexicano (SMMUN®) 2025<br>Instagram: <a href=https://www.instagram.com/smmunoficial/ >@smmunoficial</a><br>Facebook: <a href=https://www.facebook.com/smmunoficial>SMMUN</a><br>Web: <a href=https://smmun.com>https://smmun.com</a></div></table></table></div><!--[if mso | IE]><![endif]--></table></div><!--[if mso | IE]><![endif]--></div>'
+
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP("smtppro.zoho.com", 587) as smtp:
+        smtp.starttls()
+        smtp.login(msg["From"], "cwYo9ld@")
+        smtp.sendmail(msg["From"], msg["To"], msg.as_string())
+
+        # Enviar a finanzas
+        msg.replace_header("To", msg["From"])
+        msg.replace_header("Subject", f"FACULTY: {inscripcion.nombre_faculty} {inscripcion.apellido_faculty}")
+        smtp.sendmail(msg["From"], msg["From"], msg.as_string())
+
+
 # Endpoint para el forms
 @router.post("/registro-delegaciones")
-def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: FormData = Depends(), comprobante: UploadFile = File(...)):
+def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: DelegacionFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
         raise ValueError("No se envió la imagen.")
@@ -388,6 +570,37 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Form
     background_tasks.add_task(manejar_inscripcion, inscripcion, comprobante)
 
     # Redirigir a página de confirmación
+    return RedirectResponse(f"{URL_BASE}/confirmar-registro/", status_code=status.HTTP_303_SEE_OTHER)
+
+@router.post("/registro-faculty")
+async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionDep, request: Request, data: FacultyFormData = Depends(), comprobante: UploadFile = File(...)):
+    # Validar archivo
+    if comprobante.content_type is None or comprobante.size is None:
+        raise ValueError("No se envió la imagen.")
+
+    if not (comprobante.content_type.startswith("image/") or comprobante.content_type == "application/pdf") or comprobante.size > 5242880:
+        raise ValueError("Imagen inválida.")
+
+    # Modelo base de datos
+    inscripcion = FacultySM(
+        institucion_delegacion_oficial=data.institucion_delegacion_oficial,
+        nombre_faculty=data.nombre_faculty,
+        apellido_faculty=data.apellido_faculty,
+        celular_faculty=data.celular_faculty,
+        correo_faculty=data.correo_faculty,
+        ciudad_estado_faculty=data.ciudad_estado_faculty,
+        pais_faculty=data.pais_faculty,
+        numero_delegaciones=int(data.numero_delegaciones)
+    )
+
+    # Subir a base de datos
+    session.add(inscripcion)
+    session.commit()
+    session.refresh(inscripcion)
+
+    # Manejar inscripción
+    background_tasks.add_task(manejar_inscripcion_faculty, inscripcion, await request.form(), comprobante)
+
     return RedirectResponse(f"{URL_BASE}/confirmar-registro/", status_code=status.HTTP_303_SEE_OTHER)
 
 # Usar el router y montar el folder de comprobantes como estático
