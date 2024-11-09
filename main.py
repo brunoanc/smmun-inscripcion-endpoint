@@ -436,8 +436,24 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         ]
     }
 
+    delegaciones = {
+        "values": []
+    }
+
     for i in range(inscripcion.numero_delegaciones):
         body["values"].append([
+            data.get(f"nombre_{i}"),
+            data.get(f"apellido_{i}"),
+            data.get(f"edad_{i}"),
+            data.get(f"celular_{i}"),
+            data.get(f"correo_{i}"),
+            f"{data.get(f'ciudad_estado_{i}')}, {data.get(f'pais_{i}')}",
+            data.get(f"escolaridad_{i}"),
+            data.get(f"escuela_{i}")
+        ])
+
+        delegaciones["values"].append([
+            inscripcion.institucion_delegacion_oficial,
             data.get(f"nombre_{i}"),
             data.get(f"apellido_{i}"),
             data.get(f"edad_{i}"),
@@ -453,6 +469,13 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         range=f"{title}!A1:H1",
         valueInputOption="USER_ENTERED",
         body=body
+    ).execute()
+
+    service.spreadsheets().values().append(
+        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        range=f"DELEGACIONES!A1:I1",
+        valueInputOption="USER_ENTERED",
+        body=delegaciones
     ).execute()
 
     # Mandar correo
