@@ -259,7 +259,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
                 inscripcion.nombre,
                 inscripcion.apellido,
                 inscripcion.edad,
-                inscripcion.celular,
+                f"'{inscripcion.celular}",
                 inscripcion.correo,
                 inscripcion.pais,
                 inscripcion.ciudad_estado,
@@ -271,7 +271,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
                 inscripcion.nombre_co,
                 inscripcion.apellido_co,
                 inscripcion.edad_co,
-                inscripcion.celular_co,
+                f"'{inscripcion.celular_co}",
                 inscripcion.correo_co,
                 inscripcion.pais_co,
                 inscripcion.ciudad_estado_co,
@@ -372,7 +372,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
                 inscripcion.numero_delegaciones,
                 inscripcion.nombre_faculty,
                 inscripcion.apellido_faculty,
-                inscripcion.celular_faculty,
+                f"'{inscripcion.celular_faculty}",
                 inscripcion.correo_faculty,
                 inscripcion.pais_faculty,
                 inscripcion.ciudad_estado_faculty,
@@ -442,26 +442,26 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
     for i in range(inscripcion.numero_delegaciones):
         body["values"].append([
-            data.get(f"nombre_{i}"),
-            data.get(f"apellido_{i}"),
-            data.get(f"edad_{i}"),
-            data.get(f"celular_{i}"),
-            data.get(f"correo_{i}"),
-            f"{data.get(f'ciudad_estado_{i}')}, {data.get(f'pais_{i}')}",
-            data.get(f"escolaridad_{i}"),
-            data.get(f"escuela_{i}")
+            data.get(f"nombre_d{i}"),
+            data.get(f"apellido_d{i}"),
+            data.get(f"edad_d{i}"),
+            data.get(f"celular_d{i}"),
+            data.get(f"correo_d{i}"),
+            f"{data.get(f'ciudad_estado_d{i}')}, {data.get(f'pais_d{i}')}",
+            data.get(f"escolaridad_d{i}"),
+            data.get(f"escuela_d{i}")
         ])
 
         delegaciones["values"].append([
             inscripcion.institucion_delegacion_oficial,
-            data.get(f"nombre_{i}"),
-            data.get(f"apellido_{i}"),
-            data.get(f"edad_{i}"),
-            data.get(f"celular_{i}"),
-            data.get(f"correo_{i}"),
-            f"{data.get(f'ciudad_estado_{i}')}, {data.get(f'pais_{i}')}",
-            data.get(f"escolaridad_{i}"),
-            data.get(f"escuela_{i}")
+            data.get(f"nombre_d{i}"),
+            data.get(f"apellido_d{i}"),
+            data.get(f"edad_d{i}"),
+            data.get(f"celular_d{i}"),
+            data.get(f"correo_d{i}"),
+            f"{data.get(f'ciudad_estado_d{i}')}, {data.get(f'pais_d{i}')}",
+            data.get(f"escolaridad_d{i}"),
+            data.get(f"escuela_d{i}")
         ])
 
     service.spreadsheets().values().append(
