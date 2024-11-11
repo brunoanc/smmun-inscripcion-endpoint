@@ -23,7 +23,7 @@ import datetime
 
 
 # URL de la página estática
-URL_BASE = "https://smmun.com"
+URL_BASE = "https://jellyfish-app-iyb7k.ondigitalocean.app"
 
 
 # Clase para recibir y validar el forms de delegaciones
@@ -192,7 +192,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost",
         "http://localhost:8080",
-        "https://smmun.com"
+        "https://smmun.com",
+        "https://jellyfish-app-iyb7k.ondigitalocean.app"
     ],
     allow_credentials=True,
     allow_methods=["POST"],
