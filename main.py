@@ -40,7 +40,7 @@ class DelegacionFormData:
     pais_0: str = Form(max_length=150)
     ciudad_estado_0: str = Form(max_length=150)
     escolaridad_0: str = Form(pattern=r"^(Secundaria|Preparatoria|Universidad|Egresado|No estudio)$", max_length=150)
-    escuela_0: str = Form(max_length=150)
+    escuela_0: Optional[str] = Form(None, max_length=150)
     nombre_contacto_0: str = Form(max_length=150)
     celular_contacto_0: str = Form(max_length=30)
     relacion_contacto_0: str = Form(max_length=150)
@@ -104,7 +104,7 @@ class DelegacionSM(SQLModel, table=True): # type: ignore
     pais: str
     ciudad_estado: str
     escolaridad: str
-    escuela: str
+    escuela: str | None
     contacto_emergencia: str
     info_extra: str | None
 
