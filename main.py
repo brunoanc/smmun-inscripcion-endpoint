@@ -22,7 +22,7 @@ import time
 import datetime
 
 # URL de la página estática
-URL_BASE = "https://smmun0.github.io"
+URL_BASE = "https://smmun.com"
 
 # Clase para recibir y validar el forms de delegaciones
 @dataclass
