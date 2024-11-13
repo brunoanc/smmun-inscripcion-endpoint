@@ -322,9 +322,9 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP("smtppro.zoho.com", 587) as smtp:
+    with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
-        smtp.login(msg["From"], "cwYo9ld@")
+        smtp.login(msg["From"], "BZ97NPpWTPLP")
         smtp.sendmail(msg["From"], destinatarios, msg.as_string())
 
         # Enviar a finanzas
@@ -488,9 +488,9 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP("smtppro.zoho.com", 587) as smtp:
+    with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
-        smtp.login(msg["From"], "cwYo9ld@")
+        smtp.login(msg["From"], "BZ97NPpWTPLP")
         smtp.sendmail(msg["From"], msg["To"], msg.as_string())
 
         # Enviar a finanzas
