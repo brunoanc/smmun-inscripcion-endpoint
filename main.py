@@ -20,7 +20,6 @@ from datetime import datetime, timezone
 import os
 import pathlib
 import time
-import datetime
 
 # URL de la página estática
 URL_BASE = "https://smmun.com"
