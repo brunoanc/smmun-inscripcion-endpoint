@@ -17,7 +17,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 import os
 import pathlib
 import time
@@ -92,7 +91,7 @@ class FacultyFormData:
 # Clase para los datos de PostgreSQL de delegación
 class DelegacionSM(SQLModel, table=True): # type: ignore
     id: int | None = Field(default = None, primary_key=True)
-    fecha: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Merida")), index=True)
+    fecha: datetime = Field(default_factory=lambda: datetime.now() - timedelta(hours=6), index=True)
     codelegacion: bool
     delegacion_oficial: str | None
     responsable_delegacion_oficial: str | None
@@ -140,7 +139,7 @@ class DelegacionSM(SQLModel, table=True): # type: ignore
 # Clase para los datos de PostgreSQL de faculty
 class FacultySM(SQLModel, table=True): # type: ignore
     id: int | None = Field(default = None, primary_key=True)
-    fecha: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Merida")), index=True)
+    fecha: datetime = Field(default_factory=lambda: datetime.now() - timedelta(hours=6), index=True)
 
     institucion_delegacion_oficial: str
     nombre_faculty: str
@@ -250,7 +249,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
             [
                 False,
 
-                (inscripcion.fecha - datetime(1899, 12, 30)) / timedelta(days=1),
+                inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
 
                 inscripcion.codelegacion,
                 inscripcion.delegacion_oficial,
@@ -367,7 +366,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         "values": [
             [
                 False,
-                (inscripcion.fecha - datetime(1899, 12, 30)) / timedelta(days=1),
+                inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
                 inscripcion.institucion_delegacion_oficial,
                 inscripcion.numero_delegaciones,
                 inscripcion.nombre_faculty,
