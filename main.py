@@ -16,7 +16,8 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 import pathlib
 import time
@@ -91,7 +92,7 @@ class FacultyFormData:
 # Clase para los datos de PostgreSQL de delegación
 class DelegacionSM(SQLModel, table=True): # type: ignore
     id: int | None = Field(default = None, primary_key=True)
-    fecha: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    fecha: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Merida")), index=True)
     codelegacion: bool
     delegacion_oficial: str | None
     responsable_delegacion_oficial: str | None
@@ -139,7 +140,7 @@ class DelegacionSM(SQLModel, table=True): # type: ignore
 # Clase para los datos de PostgreSQL de faculty
 class FacultySM(SQLModel, table=True): # type: ignore
     id: int | None = Field(default = None, primary_key=True)
-    fecha: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    fecha: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Merida")), index=True)
 
     institucion_delegacion_oficial: str
     nombre_faculty: str
