@@ -556,8 +556,8 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
     # Modelo base de datos
     inscripcion = DelegacionSM(
         codelegacion=es_codelegacion,
-        delegacion_oficial=data.nombre_delegacion_oficial,
-        responsable_delegacion_oficial=data.responsable_delegacion_oficial,
+        delegacion_oficial=data.nombre_delegacion_oficial or "No",
+        responsable_delegacion_oficial=data.responsable_delegacion_oficial or "No aplica",
 
         nombre=data.nombre_0,
         apellido=data.apellido_0,
@@ -567,7 +567,7 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         pais=data.pais_0,
         ciudad_estado=data.ciudad_estado_0,
         escolaridad=data.escolaridad_0,
-        escuela=data.escuela_0, 
+        escuela=data.escuela_0 or "No aplica",
         contacto_emergencia=f"{data.nombre_contacto_0} ({data.relacion_contacto_0}): {data.celular_contacto_0}",
         info_extra=data.info_extra_0 if data.info_extra_0 else None,
 
@@ -579,7 +579,7 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         pais_co=data.pais_1 if es_codelegacion else None,
         ciudad_estado_co=data.ciudad_estado_1 if es_codelegacion else None,
         escolaridad_co=data.escolaridad_1 if es_codelegacion else None,
-        escuela_co=data.escuela_1 if es_codelegacion else None,
+        escuela_co=(data.escuela_1 or "No aplica") if es_codelegacion else None,
         contacto_emergencia_co=f"{data.nombre_contacto_1} ({data.relacion_contacto_1}): {data.celular_contacto_1}" if es_codelegacion else None,
         info_extra_co=data.info_extra_1 if es_codelegacion and data.info_extra_1 else None,
 
