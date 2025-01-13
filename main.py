@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 import os
 import pathlib
 import time
+import json
 
 # URL de la página estática
 URL_BASE = "https://smmun.com"
@@ -202,7 +203,7 @@ app.add_middleware(
 )
 
 
-google_credentials = service_account.Credentials.from_service_account_file("sheets-api-440213-9411d3edc882.json", scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"])
+google_credentials = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_KEY"]), scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"])
 
 
 def comite_corto_a_largo(comite):
