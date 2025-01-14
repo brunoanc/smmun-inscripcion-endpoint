@@ -322,6 +322,10 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
     # Mandar correo
     destinatarios = list(filter(None, [inscripcion.correo, inscripcion.correo_co]))
 
+    comite_1_corto = comite_corto_a_largo(inscripcion.comite_1)
+    comite_2_corto = comite_corto_a_largo(inscripcion.comite_2)
+    comite_3_corto = comite_corto_a_largo(inscripcion.comite_3)
+
     if inscripcion.codelegacion:
         html = html_emails["codelegacion"].format(**locals())
     else:
