@@ -531,7 +531,8 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
 
     # Validar comités
     if data.modalidad == "pareja":
-        if data.comite_0 in ["CRC", "NOBEL", "CIJ"] or data.comite_1 in ["CRC", "NOBEL", "CIJ"] or data.comite_2 in ["CRC", "NOBEL", "CIJ"]:
+        #if data.comite_0 in ["CRC", "NOBEL", "CIJ"] or data.comite_1 in ["CRC", "NOBEL", "CIJ"] or data.comite_2 in ["CRC", "NOBEL", "CIJ"]:
+        if data.comite_0 in ["CRC", "CIJ"] or data.comite_1 in ["CRC", "CIJ"] or data.comite_2 in ["CRC", "CIJ"]:
             raise ValueError("Opción inválida de comité.")
 
     comites = [data.comite_0, data.comite_1, data.comite_2]
