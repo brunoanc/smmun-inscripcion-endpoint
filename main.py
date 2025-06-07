@@ -183,7 +183,7 @@ app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None)
 @app.exception_handler(StarletteHTTPException)
 @app.exception_handler(RequestValidationError)
 async def http_exception_handler(request, exc):
-    return RedirectResponse(f"{URL_BASE}/error-registro/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(f"{URL_BASE}/registro/error/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # CORS
@@ -520,7 +520,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
 
 # Endpoint para el forms
-@router.post("/registro-delegaciones")
+@router.post("/registro/delegaciones")
 def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: DelegacionFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
@@ -613,9 +613,9 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
     background_tasks.add_task(manejar_inscripcion, inscripcion, comprobante)
 
     # Redirigir a página de confirmación
-    return RedirectResponse(f"{URL_BASE}/confirmar-registro/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(f"{URL_BASE}/registro/confirmacion/", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.post("/registro-faculty")
+@router.post("/registro/faculty")
 async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionDep, request: Request, data: FacultyFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
@@ -644,7 +644,7 @@ async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionD
     # Manejar inscripción
     background_tasks.add_task(manejar_inscripcion_faculty, inscripcion, await request.form(), comprobante)
 
-    return RedirectResponse(f"{URL_BASE}/confirmar-registro/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(f"{URL_BASE}/registro/confirmacion/", status_code=status.HTTP_303_SEE_OTHER)
 
 # Usar el router y montar el folder de comprobantes como estático
 app.include_router(router)
