@@ -258,7 +258,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, drive_id: str):
     msg = MIMEMultipart()
     msg["From"] = "secretariadefinanzas@smmun.com"
     msg["To"] = inscripcion.correo
-    msg["Subject"] = "¡Gracias! - RLM-MUN 2026 Latinoamérica: Conectando culturas"
+    msg["Subject"] = "¡Gracias! - RLM-MUN 2025 Latinoamérica: Conectando culturas"
     msg["Date"] = formatdate(localtime=True)
 
     msg.attach(MIMEText(html, "html"))
@@ -412,7 +412,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, drive_id
     msg = MIMEMultipart()
     msg["From"] = "secretariadefinanzas@smmun.com"
     msg["To"] = inscripcion.correo_faculty
-    msg["Subject"] = "¡Gracias! - RLM-MUN 2026 Latinoamérica: Conectando culturas"
+    msg["Subject"] = "¡Gracias! - RLM-MUN 2025 Latinoamérica: Conectando culturas"
     msg["Date"] = formatdate(localtime=True)
 
     html = html_emails["faculty"].format(**locals())
