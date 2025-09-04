@@ -1,10 +1,8 @@
-from typing import Annotated, Optional, cast
+from typing import Optional, cast
 from fastapi import FastAPI, APIRouter, Form, File, UploadFile, Depends, status, BackgroundTasks, Request
 from fastapi.responses import RedirectResponse
-from sqlmodel import Field, Session, SQLModel, create_engine
 from pydantic import EmailStr
 from dataclasses import dataclass
-from contextlib import asynccontextmanager
 from google.oauth2 import service_account
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.discovery import build
@@ -13,7 +11,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 import smtplib
-from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
@@ -24,58 +21,44 @@ import time
 import json
 
 # URL de la página estática
-URL_BASE = "https://smmun.com"
+URL_BASE = os.environ["URL_BASE"]
 
 # Clase para recibir y validar el forms de delegaciones
 @dataclass
 class DelegacionFormData:
-    modalidad: str = Form(pattern=r"^(individual|pareja)$")
     delegacion_oficial: str = Form(pattern=r"^(si|no)$")
     nombre_delegacion_oficial: Optional[str] = Form(None, max_length=150)
     responsable_delegacion_oficial: Optional[str] = Form(None, max_length=150)
 
-    nombre_0: str = Form(max_length=150)
-    apellido_0: str = Form(max_length=150)
-    edad_0: str = Form(max_length=2)
-    celular_0: str = Form(max_length=30)
-    correo_0: EmailStr = Form(max_length=150)
-    pais_0: str = Form(max_length=150)
-    ciudad_estado_0: str = Form(max_length=150)
-    escolaridad_0: str = Form(pattern=r"^(Secundaria|Preparatoria|Universidad|Egresado|No estudio)$", max_length=150)
-    escuela_0: Optional[str] = Form(None, max_length=150)
-    nombre_contacto_0: str = Form(max_length=150)
-    celular_contacto_0: str = Form(max_length=30)
-    relacion_contacto_0: str = Form(max_length=150)
-    info_extra_0: Optional[str] = Form(None, max_length=150)
+    nombre: str = Form(max_length=150)
+    apellido: str = Form(max_length=150)
+    edad: str = Form(max_length=2)
+    celular: str = Form(max_length=30)
+    correo: EmailStr = Form(max_length=150)
+    pais: str = Form(max_length=150)
+    ciudad_estado: str = Form(max_length=150)
+    escolaridad: str = Form(pattern=r"^(Secundaria|Preparatoria|Universidad|Egresado|No estudio)$", max_length=150)
+    escuela_rlm: str = Form(pattern=r"^(RLM|Otra)$", max_length=150)
+    escuela: Optional[str] = Form(None, max_length=150)
+    nombre_contacto: str = Form(max_length=150)
+    celular_contacto: str = Form(max_length=30)
+    relacion_contacto: str = Form(max_length=150)
+    info_extra: Optional[str] = Form(None, max_length=150)
 
-    nombre_1: Optional[str] = Form(None, max_length=150)
-    apellido_1: Optional[str] = Form(None, max_length=150)
-    edad_1: Optional[str] = Form(None, max_length=2)
-    celular_1: Optional[str] = Form(None, max_length=30)
-    correo_1: Optional[EmailStr | str] = Form(None, max_length=150)
-    pais_1: Optional[str] = Form(None, max_length=150)
-    ciudad_estado_1: Optional[str] = Form(None, max_length=150)
-    escolaridad_1: Optional[str] = Form(None, pattern=r"^(|Secundaria|Preparatoria|Universidad|Egresado|No estudio)$", max_length=150)
-    escuela_1: Optional[str] = Form(None, max_length=150)
-    nombre_contacto_1: Optional[str] = Form(None, max_length=150)
-    celular_contacto_1: Optional[str] = Form(None, max_length=30)
-    relacion_contacto_1: Optional[str] = Form(None, max_length=150)
-    info_extra_1: Optional[str] = Form(None, max_length=150)
-
-    comite_0: str = Form(pattern=r"^(CSTD|CRC|OIT|NOBEL|CRM|UNFPA|OSGEY|CIDH|CIJ|COI)$")
+    comite_0: str = Form(pattern=r"^(OPS|CEPAL|OEA|CRM|CNDH|CED)$")
     comite_0_pais_0: str = Form(max_length=150)
     comite_0_pais_1: str = Form(max_length=150)
-    comite_0_pais_2: Optional[str] = Form(None, max_length=150)
+    comite_0_pais_2: str = Form(max_length=150)
 
-    comite_1: str = Form(pattern=r"^(CSTD|CRC|OIT|NOBEL|CRM|UNFPA|OSGEY|CIDH|CIJ|COI)$")
+    comite_1: str = Form(pattern=r"^(OPS|CEPAL|OEA|CRM|CNDH|CED)$")
     comite_1_pais_0: str = Form(max_length=150)
     comite_1_pais_1: str = Form(max_length=150)
-    comite_1_pais_2: Optional[str] = Form(None, max_length=150)
+    comite_1_pais_2: str = Form(max_length=150)
 
-    comite_2: str = Form(pattern=r"^(CSTD|CRC|OIT|NOBEL|CRM|UNFPA|OSGEY|CIDH|CIJ|COI)$")
+    comite_2: str = Form(pattern=r"^(OPS|CEPAL|OEA|CRM|CNDH|CED)$")
     comite_2_pais_0: str = Form(max_length=150)
     comite_2_pais_1: str = Form(max_length=150)
-    comite_2_pais_2: Optional[str] = Form(None, max_length=150)
+    comite_2_pais_2: str = Form(max_length=150)
 
 
 @dataclass
@@ -90,11 +73,9 @@ class FacultyFormData:
     numero_delegaciones: str = Form(max_length=2)
 
 
-# Clase para los datos de PostgreSQL de delegación
-class DelegacionSM(SQLModel, table=True): # type: ignore
-    id: int | None = Field(default = None, primary_key=True)
-    fecha: datetime = Field(default_factory=lambda: datetime.now() - timedelta(hours=6), index=True)
-    codelegacion: bool
+# Clase para los datos de delegación
+class DelegacionSM():
+    fecha: datetime
     delegacion_oficial: str | None
     responsable_delegacion_oficial: str | None
 
@@ -110,38 +91,31 @@ class DelegacionSM(SQLModel, table=True): # type: ignore
     contacto_emergencia: str
     info_extra: str | None
 
-    nombre_co: str | None
-    apellido_co: str | None
-    edad_co: int | None
-    celular_co: str | None
-    correo_co: str | None
-    pais_co: str | None
-    ciudad_estado_co: str | None
-    escolaridad_co: str | None
-    escuela_co: str | None
-    contacto_emergencia_co: str | None
-    info_extra_co: str | None
-
-    comite_1: str = Field(index=True)
+    comite_1: str
     comite_1_opcion_1: str
     comite_1_opcion_2: str
     comite_1_opcion_3: str | None
 
-    comite_2: str = Field(index=True)
+    comite_2: str
     comite_2_opcion_1: str
     comite_2_opcion_2: str
     comite_2_opcion_3: str | None
 
-    comite_3: str = Field(index=True)
+    comite_3: str
     comite_3_opcion_1: str
     comite_3_opcion_2: str
     comite_3_opcion_3: str | None
 
+    def __init__(self, **kwargs) -> None:
+        self.fecha = datetime.now() - timedelta(hours=6)
 
-# Clase para los datos de PostgreSQL de faculty
-class FacultySM(SQLModel, table=True): # type: ignore
-    id: int | None = Field(default = None, primary_key=True)
-    fecha: datetime = Field(default_factory=lambda: datetime.now() - timedelta(hours=6), index=True)
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+# Clase para los datos de faculty
+class FacultySM():
+    fecha: datetime
 
     institucion_delegacion_oficial: str
     nombre_faculty: str
@@ -153,30 +127,16 @@ class FacultySM(SQLModel, table=True): # type: ignore
 
     numero_delegaciones: int
 
+    def __init__(self, **kwargs) -> None:
+        self.fecha = datetime.now() - timedelta(hours=6)
 
-# Conectar con la base de datos
-db_url = os.environ["DATABASE_URL"]
-engine = create_engine(db_url)
-
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
-
-def get_session():
-    with Session(engine) as session:
-        yield session
-
-SessionDep = Annotated[Session, Depends(get_session)]
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    create_db_and_tables()
-    yield
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 # Inicializar app y router
 router = APIRouter()
-app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(docs_url=None, redoc_url=None)
 
 
 # Mostrar página de error en vez de error en JSON
@@ -192,9 +152,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost",
         "http://localhost:8080",
-        "https://smmun.com",
+        "https://rlmmun.smmun.com",
         "https://jellyfish-app-iyb7k.ondigitalocean.app",
-        "https://smmun0.github.io",
+        "https://rlmmun.github.io",
         "https://github.io"
     ],
     allow_credentials=True,
@@ -208,53 +168,32 @@ google_credentials = service_account.Credentials.from_service_account_info(json.
 
 
 # HTML y archivos adjuntos de correos para enviar
-with open("email/codelegacion.html", "r") as co, open("email/delegacion.html", "r") as dg, open("email/faculty.html") as fac, open("attachments/REGLAMENTO FACULTY SM25.pdf", "rb") as reg:
+with open("email/delegacion.html", "r") as dg, open("email/faculty.html") as fac:
     html_emails = {
-        "codelegacion": co.read(),
         "delegacion": dg.read(),
-        "faculty": fac.read(),
-        "reglamento": reg.read()
+        "faculty": fac.read()
     }
 
 
 def comite_corto_a_largo(comite):
     match comite:
-        case "CSTD":
-            return "Comisión de Ciencia y Tecnología para el Desarrollo (CSTD)"
-        case "CRC":
-            return "United Nations Committee on the Rights of the Child (CRC) [inglés]"
-        case "OIT":
-            return "Organización Internacional del Trabajo (OIT)"
-        case "NOBEL":
-            return "Comité Noruego del Nobel"
+        case "OPS":
+            return "Organización Panamericana de la Salud (OPS)"
+        case "CEPAL":
+            return "Comisión Económica para América Latina y el Caribe (CEPAL)"
+        case "OEA":
+            return "Organización de los Estados Americanos (OEA)"
         case "CRM":
-            return "Conferencia Regional sobre la Mujer de América Latina y el Caribe de las Naciones Unidas (CRM)"
-        case "UNFPA":
-            return "Fondo de Población de las Naciones Unidas (UNFPA)"
-        case "OSGEY":
-            return "United Nations Office of the Secretary-General's Envoy on Youth (OSGEY) [inglés]"
-        case "CIDH":
-            return "Comisión Interamericana de Derechos Humanos (CIDH)"
-        case "CIJ":
-            return "Corte Internacional de Justicia (CIJ)"
-        case "COI":
-            return "Comité Olímpico Internacional (COI)"
+            return "Conferencia Regional sobre la Mujer de América Latina y el Caribe (CRM)"
+        case "CNDH":
+            return "Comisión Nacional de los Derechos Humanos (CNDH)"
+        case "CED":
+            return "Comité contra la Desaparición Forzada (CED)"
         case _:
             return comite
 
 
-def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
-    # Subir comprobante a drive
-    service = build("drive", "v3", credentials=google_credentials)
-
-    file_metadata = {
-        "name": f"{'CODELEGACION' if inscripcion.codelegacion else 'DELEGACION'}_{inscripcion.nombre}_{inscripcion.apellido}_{int(time.time())}{pathlib.Path(cast(str, comprobante.filename)).suffix}",
-        "parents": ["1XfM0CcaGGQAprXQKs1XSoqU4H7SCb7G4"]
-    }
-
-    media = MediaIoBaseUpload(comprobante.file, mimetype=comprobante.content_type, chunksize=-1)
-    file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-
+def manejar_inscripcion(inscripcion: DelegacionSM, drive_id: str):
     # Añadir al sheets de inscripciones
     service = build("sheets", "v4", credentials=google_credentials)
     body = {
@@ -264,7 +203,6 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
                 inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
 
-                inscripcion.codelegacion,
                 inscripcion.delegacion_oficial,
                 inscripcion.responsable_delegacion_oficial,
 
@@ -279,18 +217,6 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
                 inscripcion.escuela,
                 inscripcion.contacto_emergencia,
                 inscripcion.info_extra,
-
-                inscripcion.nombre_co,
-                inscripcion.apellido_co,
-                inscripcion.edad_co,
-                f"'{inscripcion.celular_co}",
-                inscripcion.correo_co,
-                inscripcion.pais_co,
-                inscripcion.ciudad_estado_co,
-                inscripcion.escolaridad_co,
-                inscripcion.escuela_co,
-                inscripcion.contacto_emergencia_co,
-                inscripcion.info_extra_co,
 
                 inscripcion.comite_1,
                 inscripcion.comite_1_opcion_1,
@@ -307,42 +233,40 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
                 inscripcion.comite_3_opcion_2,
                 inscripcion.comite_3_opcion_3,
 
-                f"https://drive.google.com/file/d/{file.get('id')}"
+                f"https://drive.google.com/file/d/{drive_id}"
             ]
         ]
     }
 
     service.spreadsheets().values().append(
-        spreadsheetId="1EetaVUgXbNUjZ7K2NloWuH1o5kW7usDZKlO9xVMzyic",
-        range="A1:AG1",
+        spreadsheetId="1sMjRWL62Ntu5n4sz9OFrvPNUL_o7Xcj1uOcC-ynLOVU",
+        range="GENERAL!A1:AC1",
         valueInputOption="USER_ENTERED",
         body=body
     ).execute()
 
     # Mandar correo
-    destinatarios = list(filter(None, [inscripcion.correo, inscripcion.correo_co]))
+    comite_1_largo = comite_corto_a_largo(inscripcion.comite_1)
+    comite_2_largo = comite_corto_a_largo(inscripcion.comite_2)
+    comite_3_largo = comite_corto_a_largo(inscripcion.comite_3)
 
-    comite_1_corto = comite_corto_a_largo(inscripcion.comite_1)
-    comite_2_corto = comite_corto_a_largo(inscripcion.comite_2)
-    comite_3_corto = comite_corto_a_largo(inscripcion.comite_3)
+    delegacion_oficial = inscripcion.delegacion_oficial if inscripcion.delegacion_oficial else "No"
+    responsable_delegacion_oficial = inscripcion.responsable_delegacion_oficial if inscripcion.delegacion_oficial else "No aplica"
 
-    if inscripcion.codelegacion:
-        html = html_emails["codelegacion"].format(**locals())
-    else:
-        html = html_emails["delegacion"].format(**locals())
+    html = html_emails["delegacion"].format(**locals())
 
     msg = MIMEMultipart()
     msg["From"] = "secretariadefinanzas@smmun.com"
-    msg["To"] = ", ".join(destinatarios)
-    msg["Subject"] = "¡Gracias! - SMMUN 2025: Legado de Líderes"
+    msg["To"] = inscripcion.correo
+    msg["Subject"] = "¡Gracias! - RLM-MUN 2026 Latinoamérica: Conectando culturas"
     msg["Date"] = formatdate(localtime=True)
 
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
-        smtp.login(msg["From"], "BZ97NPpWTPLP")
-        smtp.sendmail(msg["From"], destinatarios, msg.as_string())
+        smtp.login(msg["From"], os.environ["MAIL_PASS"])
+        smtp.sendmail(msg["From"], msg["To"], msg.as_string())
 
         # Enviar a finanzas
         msg.replace_header("To", msg["From"])
@@ -350,18 +274,8 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
         smtp.sendmail(msg["From"], msg["From"], msg.as_string())
 
 
-def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comprobante: UploadFile):
-    # Subir comprobante a drive
-    service = build("drive", "v3", credentials=google_credentials)
-
-    file_metadata = {
-        "name": f"FACULTY_{inscripcion.institucion_delegacion_oficial}_{int(time.time())}{pathlib.Path(cast(str, comprobante.filename)).suffix}",
-        "parents": ["1yhuaWkBRT6rdgUPTCdvfmumay5Fkuowp"]
-    }
-
-    media = MediaIoBaseUpload(comprobante.file, mimetype=comprobante.content_type, chunksize=-1)
-    file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-    link_comprobante = f"https://drive.google.com/file/d/{file.get('id')}"
+def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, drive_id: str):
+    link_comprobante = f"https://drive.google.com/file/d/{drive_id}"
 
     # Añadir nueva página al sheets
     service = build("sheets", "v4", credentials=google_credentials)
@@ -376,7 +290,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         }
     }
 
-    service.spreadsheets().batchUpdate(spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg", body=body).execute()
+    service.spreadsheets().batchUpdate(spreadsheetId="1z0qs3SmXNdTxUBK1tkU29SJJhH9G0ny3cmmCtWYnABs", body=body).execute()
 
     # Añadir valores a la tabla general
     body = {
@@ -398,8 +312,8 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
     }
 
     service.spreadsheets().values().append(
-        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
-        range=f"A1:K1",
+        spreadsheetId="1z0qs3SmXNdTxUBK1tkU29SJJhH9G0ny3cmmCtWYnABs",
+        range=f"FACULTYS!A1:K1",
         valueInputOption="USER_ENTERED",
         body=body
     ).execute()
@@ -481,14 +395,14 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         ])
 
     service.spreadsheets().values().append(
-        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        spreadsheetId="1z0qs3SmXNdTxUBK1tkU29SJJhH9G0ny3cmmCtWYnABs",
         range=f"{title}!A1:H1",
         valueInputOption="USER_ENTERED",
         body=body
     ).execute()
 
     service.spreadsheets().values().append(
-        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        spreadsheetId="1z0qs3SmXNdTxUBK1tkU29SJJhH9G0ny3cmmCtWYnABs",
         range=f"DELEGACIONES!A1:I1",
         valueInputOption="USER_ENTERED",
         body=delegaciones
@@ -498,19 +412,15 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
     msg = MIMEMultipart()
     msg["From"] = "secretariadefinanzas@smmun.com"
     msg["To"] = inscripcion.correo_faculty
-    msg["Subject"] = "¡Gracias! - SMMUN 2025: Legado de Líderes"
+    msg["Subject"] = "¡Gracias! - RLM-MUN 2026 Latinoamérica: Conectando culturas"
     msg["Date"] = formatdate(localtime=True)
 
     html = html_emails["faculty"].format(**locals())
     msg.attach(MIMEText(html, "html"))
 
-    part = MIMEApplication(html_emails["reglamento"], Name="REGLAMENTO FACULTY SM25.pdf")
-    part['Content-Disposition'] = 'attachment; filename="REGLAMENTO FACULTY SM25.pdf"'
-    msg.attach(part)
-
     with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
-        smtp.login(msg["From"], "BZ97NPpWTPLP")
+        smtp.login(msg["From"], os.environ["MAIL_PASS"])
         smtp.sendmail(msg["From"], msg["To"], msg.as_string())
 
         # Enviar a finanzas
@@ -521,19 +431,13 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
 # Endpoint para el forms
 @router.post("/registro/delegaciones")
-def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: DelegacionFormData = Depends(), comprobante: UploadFile = File(...)):
+def registrar(background_tasks: BackgroundTasks, data: DelegacionFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
         raise ValueError("No se envió la imagen.")
 
     if not (comprobante.content_type.startswith("image/") or comprobante.content_type == "application/pdf") or comprobante.size > 5242880:
         raise ValueError("Imagen inválida.")
-
-    # Validar comités
-    if data.modalidad == "pareja":
-        #if data.comite_0 in ["CRC", "NOBEL", "CIJ"] or data.comite_1 in ["CRC", "NOBEL", "CIJ"] or data.comite_2 in ["CRC", "NOBEL", "CIJ"]:
-        if data.comite_0 in ["CRC", "CIJ"] or data.comite_1 in ["CRC", "CIJ"] or data.comite_2 in ["CRC", "CIJ"]:
-            raise ValueError("Opción inválida de comité.")
 
     comites = [data.comite_0, data.comite_1, data.comite_2]
     if len(comites) != len(set(comites)):
@@ -551,72 +455,63 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
     paises_2 = [data.comite_2_pais_0, data.comite_2_pais_1, data.comite_2_pais_2]
     if len(paises_2) != len(set(paises_2)):
         raise ValueError("Opciones de delegación repetidas.")
-
-    es_codelegacion = data.modalidad == "pareja"
     
     # Validar edades
-    if not 11 <= int(data.edad_0) <= 26 or (es_codelegacion and (data.edad_1 is None or not 11 <= int(data.edad_1) <= 26)):
+    if not 11 <= int(data.edad) <= 26:
         raise ValueError("Edad inválida.")
 
     # Modelo base de datos
     inscripcion = DelegacionSM(
-        codelegacion=es_codelegacion,
         delegacion_oficial=data.nombre_delegacion_oficial or "No",
         responsable_delegacion_oficial=data.responsable_delegacion_oficial or "No aplica",
 
-        nombre=data.nombre_0,
-        apellido=data.apellido_0,
-        edad=int(data.edad_0),
-        celular=data.celular_0,
-        correo=data.correo_0,
-        pais=data.pais_0,
-        ciudad_estado=data.ciudad_estado_0,
-        escolaridad=data.escolaridad_0,
-        escuela=data.escuela_0 or "No aplica",
-        contacto_emergencia=f"{data.nombre_contacto_0} ({data.relacion_contacto_0}): {data.celular_contacto_0}",
-        info_extra=data.info_extra_0 if data.info_extra_0 else None,
-
-        nombre_co=data.nombre_1 if es_codelegacion else None,
-        apellido_co=data.apellido_1 if es_codelegacion else None,
-        edad_co=int(cast(str, data.edad_1)) if es_codelegacion else None,
-        celular_co=data.celular_1 if es_codelegacion else None,
-        correo_co=data.correo_1 if es_codelegacion else None,
-        pais_co=data.pais_1 if es_codelegacion else None,
-        ciudad_estado_co=data.ciudad_estado_1 if es_codelegacion else None,
-        escolaridad_co=data.escolaridad_1 if es_codelegacion else None,
-        escuela_co=(data.escuela_1 or "No aplica") if es_codelegacion else None,
-        contacto_emergencia_co=f"{data.nombre_contacto_1} ({data.relacion_contacto_1}): {data.celular_contacto_1}" if es_codelegacion else None,
-        info_extra_co=data.info_extra_1 if es_codelegacion and data.info_extra_1 else None,
+        nombre=data.nombre,
+        apellido=data.apellido,
+        edad=int(data.edad),
+        celular=data.celular,
+        correo=data.correo,
+        pais=data.pais,
+        ciudad_estado=data.ciudad_estado,
+        escolaridad=data.escolaridad,
+        escuela="Secundaria Ricardo López Méndez" if data.escuela_rlm == "RLM" else (data.escuela or "No aplica"),
+        contacto_emergencia=f"{data.nombre_contacto} ({data.relacion_contacto}): {data.celular_contacto}",
+        info_extra=data.info_extra if data.info_extra else None,
 
         comite_1=data.comite_0,
         comite_1_opcion_1=data.comite_0_pais_0.split(":")[1],
         comite_1_opcion_2=data.comite_0_pais_1.split(":")[1],
-        comite_1_opcion_3=data.comite_0_pais_2.split(":")[1] if data.comite_0 != "CIJ" and data.comite_0_pais_2 else None,
+        comite_1_opcion_3=data.comite_0_pais_2.split(":")[1],
 
         comite_2=data.comite_1,
         comite_2_opcion_1=data.comite_1_pais_0.split(":")[1],
         comite_2_opcion_2=data.comite_1_pais_1.split(":")[1],
-        comite_2_opcion_3=data.comite_1_pais_2.split(":")[1] if data.comite_1 != "CIJ" and data.comite_1_pais_2 else None,
+        comite_2_opcion_3=data.comite_1_pais_2.split(":")[1],
 
         comite_3=data.comite_2,
         comite_3_opcion_1=data.comite_2_pais_0.split(":")[1],
         comite_3_opcion_2=data.comite_2_pais_1.split(":")[1],
-        comite_3_opcion_3=data.comite_2_pais_2.split(":")[1] if data.comite_2 != "CIJ" and data.comite_2_pais_2 else None
+        comite_3_opcion_3=data.comite_2_pais_2.split(":")[1]
     )
 
-    # Subir a base de datos
-    session.add(inscripcion)
-    session.commit()
-    session.refresh(inscripcion)
+    # Subir comprobante a drive
+    service = build("drive", "v3", credentials=google_credentials)
+
+    file_metadata = {
+        "name": f"DELEGACION_{inscripcion.nombre}_{inscripcion.apellido}_{int(time.time())}{pathlib.Path(cast(str, comprobante.filename)).suffix}",
+        "parents": ["1AUby3HWkATfS2tZPnUlGi8Ri6FWx2OZg"]
+    }
+
+    media = MediaIoBaseUpload(comprobante.file, mimetype=comprobante.content_type, chunksize=-1)
+    file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
 
     # Manejar inscripción
-    background_tasks.add_task(manejar_inscripcion, inscripcion, comprobante)
+    background_tasks.add_task(manejar_inscripcion, inscripcion, file.get("id"))
 
     # Redirigir a página de confirmación
     return RedirectResponse(f"{URL_BASE}/registro/confirmacion/", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/registro/faculty")
-async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionDep, request: Request, data: FacultyFormData = Depends(), comprobante: UploadFile = File(...)):
+async def registrar_faculty(background_tasks: BackgroundTasks, request: Request, data: FacultyFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
         raise ValueError("No se envió la imagen.")
@@ -636,13 +531,19 @@ async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionD
         numero_delegaciones=int(data.numero_delegaciones)
     )
 
-    # Subir a base de datos
-    session.add(inscripcion)
-    session.commit()
-    session.refresh(inscripcion)
+    # Subir comprobante a drive
+    service = build("drive", "v3", credentials=google_credentials)
+
+    file_metadata = {
+        "name": f"FACULTY_{inscripcion.institucion_delegacion_oficial}_{int(time.time())}{pathlib.Path(cast(str, comprobante.filename)).suffix}",
+        "parents": ["1P1HBXBWCaolwoEWyqvgcwyP_E48PCHba"]
+    }
+
+    media = MediaIoBaseUpload(comprobante.file, mimetype=comprobante.content_type, chunksize=-1)
+    file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
 
     # Manejar inscripción
-    background_tasks.add_task(manejar_inscripcion_faculty, inscripcion, await request.form(), comprobante)
+    background_tasks.add_task(manejar_inscripcion_faculty, inscripcion, await request.form(), file.get("id"))
 
     return RedirectResponse(f"{URL_BASE}/registro/confirmacion/", status_code=status.HTTP_303_SEE_OTHER)
 
