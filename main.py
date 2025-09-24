@@ -45,17 +45,17 @@ class DelegacionFormData:
     relacion_contacto: str = Form(max_length=150)
     info_extra: Optional[str] = Form(None, max_length=150)
 
-    comite_0: str = Form(pattern=r"^(OPS|OEA|CNDH|CED)$")
+    comite_0: str = Form(pattern=r"^(OPS|CEPAL|OEA|CRM|CNDH|CED)$")
     comite_0_pais_0: str = Form(max_length=150)
     comite_0_pais_1: str = Form(max_length=150)
     comite_0_pais_2: str = Form(max_length=150)
 
-    comite_1: str = Form(pattern=r"^(OPS|OEA|CNDH|CED)$")
+    comite_1: str = Form(pattern=r"^(OPS|CEPAL|OEA|CRM|CNDH|CED)$")
     comite_1_pais_0: str = Form(max_length=150)
     comite_1_pais_1: str = Form(max_length=150)
     comite_1_pais_2: str = Form(max_length=150)
 
-    comite_2: str = Form(pattern=r"^(OPS|OEA|CNDH|CED)$")
+    comite_2: str = Form(pattern=r"^(OPS|CEPAL|OEA|CRM|CNDH|CED)$")
     comite_2_pais_0: str = Form(max_length=150)
     comite_2_pais_1: str = Form(max_length=150)
     comite_2_pais_2: str = Form(max_length=150)
