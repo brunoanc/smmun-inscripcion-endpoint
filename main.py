@@ -23,6 +23,7 @@ import os
 import pathlib
 import time
 import json
+import resend
 
 # URL de la página estática
 URL_BASE = "https://smmun0githubio-production.up.railway.app"
@@ -227,8 +228,9 @@ app.add_middleware(
 )
 
 
-# Credenciales para APIs de Google
+# Credenciales para APIs de Google y Resend
 google_credentials = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_KEY"]), scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"])
+resend.api_key = os.environ["RESEND_API_KEY"]
 
 
 # HTML y archivos adjuntos de correos para enviar (plantillas de prueba)
@@ -389,23 +391,19 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
     else:
         html = html_emails["delegacion"].format(**locals())
 
-    msg = MIMEMultipart()
-    msg["From"] = "secretariadefinanzas@smmun.com"
-    msg["To"] = ", ".join(destinatarios)
-    msg["Subject"] = "¡Gracias! - SMMUN 2026: Una Nueva Historia"
-    msg["Date"] = formatdate(localtime=True)
+    resend.Emails.send({
+        "from": "Secretaría de Finanzas SMMUN <secretariadefinanzas@smmun.com>",
+        "to": destinatarios,
+        "subject": "¡Gracias! - SMMUN 2026: Una Nueva Historia",
+        "html": html,
+    })
 
-    msg.attach(MIMEText(html, "html"))
-
-    with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
-        smtp.starttls()
-        smtp.login(msg["From"], os.environ["ZOHO_PSWD"])
-        smtp.sendmail(msg["From"], destinatarios, msg.as_string())
-
-        # Enviar a finanzas
-        msg.replace_header("To", msg["From"])
-        msg.replace_header("Subject", f"Inscripción: {inscripcion.nombre} {inscripcion.apellido}")
-        smtp.sendmail(msg["From"], msg["From"], msg.as_string())
+    resend.Emails.send({
+        "from": "Secretaría de Finanzas SMMUN <secretariadefinanzas@smmun.com>",
+        "to": "secretariadefinanzas@smmun.com",
+        "subject": f"Inscripción: {inscripcion.nombre} {inscripcion.apellido}",
+        "html": html,
+    })
 
 
 def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comprobante: UploadFile):
@@ -552,29 +550,19 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         body=delegaciones
     ).execute()
 
-    # Mandar correo
-    msg = MIMEMultipart()
-    msg["From"] = "secretariadefinanzas@smmun.com"
-    msg["To"] = inscripcion.correo_faculty
-    msg["Subject"] = "¡Gracias! - SMMUN 2025: Una Nueva Historia"
-    msg["Date"] = formatdate(localtime=True)
+    resend.Emails.send({
+        "from": "Secretaría de Finanzas SMMUN <secretariadefinanzas@smmun.com>",
+        "to": [inscripcion.correo_faculty],
+        "subject": "¡Gracias! - SMMUN 2026: Una Nueva Historia",
+        "html": html,
+    })
 
-    html = html_emails["faculty"].format(**locals())
-    msg.attach(MIMEText(html, "html"))
-
-    #part = MIMEApplication(html_emails["reglamento"], Name="REGLAMENTO_FACULTY_PLACEHOLDER.txt")
-    #part['Content-Disposition'] = 'attachment; filename="REGLAMENTO_FACULTY_PLACEHOLDER.txt"'
-    #msg.attach(part)
-
-    with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
-        smtp.starttls()
-        smtp.login(msg["From"], os.environ["ZOHO_PSWD"])
-        smtp.sendmail(msg["From"], msg["To"], msg.as_string())
-
-        # Enviar a finanzas
-        msg.replace_header("To", msg["From"])
-        msg.replace_header("Subject", f"FACULTY: {inscripcion.nombre_faculty} {inscripcion.apellido_faculty}")
-        smtp.sendmail(msg["From"], msg["From"], msg.as_string())
+    resend.Emails.send({
+        "from": "Secretaría de Finanzas SMMUN <secretariadefinanzas@smmun.com>",
+        "to": "secretariadefinanzas@smmun.com",
+        "subject": f"FACULTY: {inscripcion.nombre_faculty} {inscripcion.apellido_faculty}",
+        "html": html,
+    })
 
 
 # Endpoint para el forms
