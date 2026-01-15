@@ -655,13 +655,10 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
 
     # Modelo base de datos
     delegacion_oficial_nombre = data.nombre_delegacion_oficial or "No aplica"
-    info_extra_principal = data.info_extra_0 if data.info_extra_0 else None
-    if data.delegacion_oficial == "si":
-        info_extra_principal = (info_extra_principal + " | " if info_extra_principal else "") + f"Delegación oficial: {delegacion_oficial_nombre}"
 
     inscripcion = DelegacionSM(
         codelegacion=es_codelegacion,
-        delegacion_oficial=data.delegacion_oficial,
+        delegacion_oficial=delegacion_oficial_nombre,
         responsable_delegacion_oficial=data.responsable_delegacion_oficial or "No aplica",
 
         nombre=data.nombre_0,
@@ -674,7 +671,7 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         escolaridad=data.escolaridad_0,
         escuela=data.escuela_0 or "No aplica",
         contacto_emergencia=f"{data.nombre_contacto_0} ({data.relacion_contacto_0}): {data.celular_contacto_0}",
-        info_extra=info_extra_principal,
+        info_extra=data.info_extra_0,
 
         nombre_co=data.nombre_1 if es_codelegacion else None,
         apellido_co=data.apellido_1 if es_codelegacion else None,
