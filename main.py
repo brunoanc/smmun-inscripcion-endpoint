@@ -395,7 +395,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
-        smtp.login(msg["From"], "BZ97NPpWTPLP")
+        smtp.login(msg["From"], os.environ["ZOHO_PSWD"])
         smtp.sendmail(msg["From"], destinatarios, msg.as_string())
 
         # Enviar a finanzas
