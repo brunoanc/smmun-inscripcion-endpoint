@@ -76,8 +76,7 @@
 
                 <mj-column width="60%" vertical-align="middle">
                     <mj-text padding="15px 0">
-                        ¿¿"Codelegación" if inscripcion.codelegacion else
-                        "Delegación individual"??
+                        ¿¿tipo_delegacion??
                     </mj-text>
                 </mj-column>
             </mj-group>
@@ -127,8 +126,7 @@
 
                 <mj-column width="60%" vertical-align="middle">
                     <mj-text padding="15px 0">
-                        ¿¿inscripcion.delegacion_oficial if
-                        inscripcion.delegacion_oficial else "No"??
+                        ¿¿do_texto??
                     </mj-text>
                 </mj-column>
             </mj-group>
@@ -159,8 +157,7 @@
 
                 <mj-column width="60%" vertical-align="middle">
                     <mj-text padding="15px 0">
-                        ¿¿inscripcion.responsable_delegacion_oficial if
-                        inscripcion.delegacion_oficial else "No aplica"??
+                        ¿¿responsable_do??
                     </mj-text>
                 </mj-column>
             </mj-group>
@@ -504,7 +501,7 @@
 
                 <mj-column width="60%" vertical-align="middle">
                     <mj-text padding="15px 0">
-                        ¿¿comite_corto_a_largo(inscripcion.comite_1)??
+                        ¿¿comite_1_largo??
                     </mj-text>
                 </mj-column>
             </mj-group>
@@ -647,7 +644,7 @@
 
                 <mj-column width="60%" vertical-align="middle">
                     <mj-text padding="15px 0">
-                        ¿¿comite_corto_a_largo(inscripcion.comite_2)??
+                        ¿¿comite_2_largo??
                     </mj-text>
                 </mj-column>
             </mj-group>
@@ -790,7 +787,7 @@
 
                 <mj-column width="60%" vertical-align="middle">
                     <mj-text padding="15px 0">
-                        ¿¿comite_corto_a_largo(inscripcion.comite_3)??
+                        ¿¿comite_3_largo??
                     </mj-text>
                 </mj-column>
             </mj-group>

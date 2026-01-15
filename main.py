@@ -376,9 +376,13 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
     # Mandar correo
     destinatarios = list(filter(None, [inscripcion.correo, inscripcion.correo_co]))
 
-    comite_1_corto = comite_corto_a_largo(inscripcion.comite_1)
-    comite_2_corto = comite_corto_a_largo(inscripcion.comite_2)
-    comite_3_corto = comite_corto_a_largo(inscripcion.comite_3)
+    comite_1_largo = comite_corto_a_largo(inscripcion.comite_1)
+    comite_2_largo = comite_corto_a_largo(inscripcion.comite_2)
+    comite_3_largo = comite_corto_a_largo(inscripcion.comite_3)
+
+    tipo_delegacion = "Codelegación" if inscripcion.codelegacion else "Delegación individual"
+    do_texto = inscripcion.delegacion_oficial if inscripcion.delegacion_oficial else "No"
+    responsable_do = inscripcion.responsable_delegacion_oficial if inscripcion.delegacion_oficial else "No aplica"
 
     if inscripcion.codelegacion:
         html = html_emails["codelegacion"].format(**locals())
@@ -393,7 +397,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
+    with smtplib.SMTP("smtppro.zoho.com", 587) as smtp:
         smtp.starttls()
         smtp.login(msg["From"], os.environ["ZOHO_PSWD"])
         smtp.sendmail(msg["From"], destinatarios, msg.as_string())
