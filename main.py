@@ -5,6 +5,7 @@ from sqlmodel import Field, Session, SQLModel, create_engine
 from pydantic import EmailStr
 from dataclasses import dataclass
 from contextlib import asynccontextmanager
+import unicodedata
 from google.oauth2 import service_account
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.discovery import build
@@ -24,7 +25,30 @@ import time
 import json
 
 # URL de la página estática
-URL_BASE = "https://smmun.com"
+URL_BASE = "https://smmun0githubio-production.up.railway.app"
+
+# Lista de comités y tipos no permitidos en codelegación
+COMITES_VALIDOS = [
+    "SOCHUM",
+    "ONU SIDA",
+    "ONU-Hábitat",
+    "CCPCJ",
+    "UNRWA",
+    "Cumbre",
+    "NASA",
+    "WWF",
+    "Crisis",
+    "FIA",
+    "FHCM",
+]
+
+TIPOS_SOLO_INDIVIDUAL = {"pilotos", "disenadores_emergentes", "astronautas", "representantes_nasa"}
+COMITES_CON_TIPOS = {"fia", "fhcm", "nasa", "cumbre_futuro"}
+
+# Cargar delegaciones para validaciones cruzadas
+with open("src/lib/data/delegaciones.json", "r", encoding="utf-8") as delegaciones_json:
+    delegaciones_data = json.load(delegaciones_json)
+
 
 # Clase para recibir y validar el forms de delegaciones
 @dataclass
@@ -62,17 +86,17 @@ class DelegacionFormData:
     relacion_contacto_1: Optional[str] = Form(None, max_length=150)
     info_extra_1: Optional[str] = Form(None, max_length=150)
 
-    comite_0: str = Form(pattern=r"^(CSTD|CRC|OIT|NOBEL|CRM|UNFPA|OSGEY|CIDH|CIJ|COI)$")
+    comite_0: str = Form(pattern=r"^(SOCHUM|ONU SIDA|ONU-Hábitat|CCPCJ|UNRWA|Cumbre|NASA|WWF|Crisis|FIA|FHCM)$")
     comite_0_pais_0: str = Form(max_length=150)
     comite_0_pais_1: str = Form(max_length=150)
     comite_0_pais_2: Optional[str] = Form(None, max_length=150)
 
-    comite_1: str = Form(pattern=r"^(CSTD|CRC|OIT|NOBEL|CRM|UNFPA|OSGEY|CIDH|CIJ|COI)$")
+    comite_1: str = Form(pattern=r"^(SOCHUM|ONU SIDA|ONU-Hábitat|CCPCJ|UNRWA|Cumbre|NASA|WWF|Crisis|FIA|FHCM)$")
     comite_1_pais_0: str = Form(max_length=150)
     comite_1_pais_1: str = Form(max_length=150)
     comite_1_pais_2: Optional[str] = Form(None, max_length=150)
 
-    comite_2: str = Form(pattern=r"^(CSTD|CRC|OIT|NOBEL|CRM|UNFPA|OSGEY|CIDH|CIJ|COI)$")
+    comite_2: str = Form(pattern=r"^(SOCHUM|ONU SIDA|ONU-Hábitat|CCPCJ|UNRWA|Cumbre|NASA|WWF|Crisis|FIA|FHCM)$")
     comite_2_pais_0: str = Form(max_length=150)
     comite_2_pais_1: str = Form(max_length=150)
     comite_2_pais_2: Optional[str] = Form(None, max_length=150)
@@ -193,7 +217,7 @@ app.add_middleware(
         "http://localhost",
         "http://localhost:8080",
         "https://smmun.com",
-        "https://jellyfish-app-iyb7k.ondigitalocean.app",
+        "https://smmun0githubio-production.up.railway.app",
         "https://smmun0.github.io",
         "https://github.io"
     ],
@@ -207,40 +231,70 @@ app.add_middleware(
 google_credentials = service_account.Credentials.from_service_account_info(json.loads(os.environ["GOOGLE_KEY"]), scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"])
 
 
-# HTML y archivos adjuntos de correos para enviar
-with open("email/codelegacion.html", "r") as co, open("email/delegacion.html", "r") as dg, open("email/faculty.html") as fac, open("attachments/REGLAMENTO FACULTY SM25.pdf", "rb") as reg:
+# HTML y archivos adjuntos de correos para enviar (plantillas de prueba)
+with open("email/codelegacion.html", "r", encoding="utf-8") as co, open("email/delegacion.html", "r", encoding="utf-8") as dg, open("email/faculty.html", encoding="utf-8") as fac:
     html_emails = {
         "codelegacion": co.read(),
         "delegacion": dg.read(),
         "faculty": fac.read(),
-        "reglamento": reg.read()
+        #"reglamento": reg.read()
     }
 
 
 def comite_corto_a_largo(comite):
     match comite:
-        case "CSTD":
-            return "Comisión de Ciencia y Tecnología para el Desarrollo (CSTD)"
-        case "CRC":
-            return "United Nations Committee on the Rights of the Child (CRC) [inglés]"
-        case "OIT":
-            return "Organización Internacional del Trabajo (OIT)"
-        case "NOBEL":
-            return "Comité Noruego del Nobel"
-        case "CRM":
-            return "Conferencia Regional sobre la Mujer de América Latina y el Caribe de las Naciones Unidas (CRM)"
-        case "UNFPA":
-            return "Fondo de Población de las Naciones Unidas (UNFPA)"
-        case "OSGEY":
-            return "United Nations Office of the Secretary-General's Envoy on Youth (OSGEY) [inglés]"
-        case "CIDH":
-            return "Comisión Interamericana de Derechos Humanos (CIDH)"
-        case "CIJ":
-            return "Corte Internacional de Justicia (CIJ)"
-        case "COI":
-            return "Comité Olímpico Internacional (COI)"
+        case "SOCHUM":
+            return "Tercera Comisión de la Asamblea General referente a lo Social, Cultural, Humanitario y de Derechos Humanos (SOCHUM)"
+        case "ONU SIDA":
+            return "Programa Conjunto de las Naciones Unidas para el VIH-SIDA (ONU SIDA)"
+        case "ONU-Hábitat":
+            return "Programa de las Naciones Unidas para los Asentamientos Humanos (ONU-Hábitat)"
+        case "CCPCJ":
+            return "Comisión de prevención del delito y Justicia Penal de las Naciones Unidas (CCPCJ)"
+        case "UNRWA":
+            return "Agencia de las Naciones Unidas para los Refugiados de Palestina en Oriente Próximo (UNRWA)"
+        case "Cumbre":
+            return "Cumbre del Futuro"
+        case "NASA":
+            return "Administración Nacional de Aeronáutica y del Espacio (NASA)"
+        case "WWF":
+            return "World Wildlife Fund for Nature (WWF)"
+        case "Crisis":
+            return "Crisis Futura"
+        case "FIA":
+            return "Federación Internacional del Automóvil (FIA)"
+        case "FHCM":
+            return "Federación de Alta Costura y Moda (FHCM)"
         case _:
             return comite
+
+
+def normalizar_comite(siglas: str) -> str:
+    texto = unicodedata.normalize("NFD", siglas)
+    texto = "".join(ch for ch in texto if unicodedata.category(ch) != "Mn")
+    texto = texto.lower().replace(" ", "_").replace("-", "_")
+    if texto == "cumbre":
+        return "cumbre_futuro"
+    return texto
+
+
+def obtener_tipo_delegacion(comite_siglas: str, delegacion_nombre: str) -> Optional[str]:
+    clave = normalizar_comite(comite_siglas)
+    data = delegaciones_data.get(clave)
+    if not isinstance(data, dict):
+        return None
+
+    for tipo, lista in data.items():
+        if any(item.get("nombre") == delegacion_nombre for item in lista):
+            return tipo
+    return None
+
+
+def parse_delegacion(valor: str) -> tuple[str, str]:
+    if ":" not in valor:
+        raise ValueError("Delegación inválida.")
+    comite_valor, delegacion = valor.split(":", 1)
+    return comite_valor, delegacion
 
 
 def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
@@ -334,7 +388,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
     msg = MIMEMultipart()
     msg["From"] = "secretariadefinanzas@smmun.com"
     msg["To"] = ", ".join(destinatarios)
-    msg["Subject"] = "¡Gracias! - SMMUN 2025: Legado de Líderes"
+    msg["Subject"] = "¡Gracias! - SMMUN 2026: Una Nueva Historia"
     msg["Date"] = formatdate(localtime=True)
 
     msg.attach(MIMEText(html, "html"))
@@ -498,15 +552,15 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
     msg = MIMEMultipart()
     msg["From"] = "secretariadefinanzas@smmun.com"
     msg["To"] = inscripcion.correo_faculty
-    msg["Subject"] = "¡Gracias! - SMMUN 2025: Legado de Líderes"
+    msg["Subject"] = "¡Gracias! - SMMUN 2025: Una Nueva Historia"
     msg["Date"] = formatdate(localtime=True)
 
     html = html_emails["faculty"].format(**locals())
     msg.attach(MIMEText(html, "html"))
 
-    part = MIMEApplication(html_emails["reglamento"], Name="REGLAMENTO FACULTY SM25.pdf")
-    part['Content-Disposition'] = 'attachment; filename="REGLAMENTO FACULTY SM25.pdf"'
-    msg.attach(part)
+    #part = MIMEApplication(html_emails["reglamento"], Name="REGLAMENTO_FACULTY_PLACEHOLDER.txt")
+    #part['Content-Disposition'] = 'attachment; filename="REGLAMENTO_FACULTY_PLACEHOLDER.txt"'
+    #msg.attach(part)
 
     with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
@@ -520,7 +574,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
 
 # Endpoint para el forms
-@router.post("/registro/delegaciones")
+@router.post("/api/registro/delegaciones")
 def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: DelegacionFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
@@ -530,14 +584,15 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         raise ValueError("Imagen inválida.")
 
     # Validar comités
-    if data.modalidad == "pareja":
-        #if data.comite_0 in ["CRC", "NOBEL", "CIJ"] or data.comite_1 in ["CRC", "NOBEL", "CIJ"] or data.comite_2 in ["CRC", "NOBEL", "CIJ"]:
-        if data.comite_0 in ["CRC", "CIJ"] or data.comite_1 in ["CRC", "CIJ"] or data.comite_2 in ["CRC", "CIJ"]:
-            raise ValueError("Opción inválida de comité.")
+    if data.modalidad == "pareja" and (data.comite_0 in ["Cumbre", "Crisis"] or data.comite_1 in ["Cumbre", "Crisis"] or data.comite_2 in ["Cumbre", "Crisis"]):
+        raise ValueError("Opción inválida de comité para codelegación.")
 
     comites = [data.comite_0, data.comite_1, data.comite_2]
     if len(comites) != len(set(comites)):
         raise ValueError("Opciones de comités repetidas.")
+
+    if data.delegacion_oficial == "si" and (not data.nombre_delegacion_oficial or not data.responsable_delegacion_oficial):
+        raise ValueError("Faltan datos de delegación oficial.")
 
     # Validar países
     paises_0 = [data.comite_0_pais_0, data.comite_0_pais_1, data.comite_0_pais_2]
@@ -558,10 +613,55 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
     if not 11 <= int(data.edad_0) <= 26 or (es_codelegacion and (data.edad_1 is None or not 11 <= int(data.edad_1) <= 26)):
         raise ValueError("Edad inválida.")
 
+    # Validar datos de codelegación obligatorios
+    if es_codelegacion:
+        requeridos = [
+            data.nombre_1,
+            data.apellido_1,
+            data.edad_1,
+            data.celular_1,
+            data.correo_1,
+            data.pais_1,
+            data.ciudad_estado_1,
+            data.escolaridad_1,
+            data.nombre_contacto_1,
+            data.celular_contacto_1,
+            data.relacion_contacto_1,
+        ]
+        if any(item is None or str(item).strip() == "" for item in requeridos):
+            raise ValueError("Faltan datos de la codelegación.")
+
+    # Validar tipos no permitidos en codelegación
+    if es_codelegacion:
+        delegaciones_seleccionadas = [
+            (data.comite_0, data.comite_0_pais_0),
+            (data.comite_0, data.comite_0_pais_1),
+            (data.comite_0, data.comite_0_pais_2),
+            (data.comite_1, data.comite_1_pais_0),
+            (data.comite_1, data.comite_1_pais_1),
+            (data.comite_1, data.comite_1_pais_2),
+            (data.comite_2, data.comite_2_pais_0),
+            (data.comite_2, data.comite_2_pais_1),
+            (data.comite_2, data.comite_2_pais_2),
+        ]
+
+        for comite_siglas, valor in delegaciones_seleccionadas:
+            if not valor:
+                continue
+            _, delegacion_nombre = parse_delegacion(valor)
+            tipo = obtener_tipo_delegacion(comite_siglas, delegacion_nombre)
+            if tipo in TIPOS_SOLO_INDIVIDUAL:
+                raise ValueError("Delegación no disponible para codelegación.")
+
     # Modelo base de datos
+    delegacion_oficial_nombre = data.nombre_delegacion_oficial or "No aplica"
+    info_extra_principal = data.info_extra_0 if data.info_extra_0 else None
+    if data.delegacion_oficial == "si":
+        info_extra_principal = (info_extra_principal + " | " if info_extra_principal else "") + f"Delegación oficial: {delegacion_oficial_nombre}"
+
     inscripcion = DelegacionSM(
         codelegacion=es_codelegacion,
-        delegacion_oficial=data.nombre_delegacion_oficial or "No",
+        delegacion_oficial=data.delegacion_oficial,
         responsable_delegacion_oficial=data.responsable_delegacion_oficial or "No aplica",
 
         nombre=data.nombre_0,
@@ -574,7 +674,7 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         escolaridad=data.escolaridad_0,
         escuela=data.escuela_0 or "No aplica",
         contacto_emergencia=f"{data.nombre_contacto_0} ({data.relacion_contacto_0}): {data.celular_contacto_0}",
-        info_extra=data.info_extra_0 if data.info_extra_0 else None,
+        info_extra=info_extra_principal,
 
         nombre_co=data.nombre_1 if es_codelegacion else None,
         apellido_co=data.apellido_1 if es_codelegacion else None,
@@ -591,17 +691,17 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         comite_1=data.comite_0,
         comite_1_opcion_1=data.comite_0_pais_0.split(":")[1],
         comite_1_opcion_2=data.comite_0_pais_1.split(":")[1],
-        comite_1_opcion_3=data.comite_0_pais_2.split(":")[1] if data.comite_0 != "CIJ" and data.comite_0_pais_2 else None,
+        comite_1_opcion_3=data.comite_0_pais_2.split(":")[1] if data.comite_0_pais_2 else None,
 
         comite_2=data.comite_1,
         comite_2_opcion_1=data.comite_1_pais_0.split(":")[1],
         comite_2_opcion_2=data.comite_1_pais_1.split(":")[1],
-        comite_2_opcion_3=data.comite_1_pais_2.split(":")[1] if data.comite_1 != "CIJ" and data.comite_1_pais_2 else None,
+        comite_2_opcion_3=data.comite_1_pais_2.split(":")[1] if data.comite_1_pais_2 else None,
 
         comite_3=data.comite_2,
         comite_3_opcion_1=data.comite_2_pais_0.split(":")[1],
         comite_3_opcion_2=data.comite_2_pais_1.split(":")[1],
-        comite_3_opcion_3=data.comite_2_pais_2.split(":")[1] if data.comite_2 != "CIJ" and data.comite_2_pais_2 else None
+        comite_3_opcion_3=data.comite_2_pais_2.split(":")[1] if data.comite_2_pais_2 else None
     )
 
     # Subir a base de datos
@@ -615,7 +715,7 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
     # Redirigir a página de confirmación
     return RedirectResponse(f"{URL_BASE}/registro/confirmacion/", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.post("/registro/faculty")
+@router.post("/api/registro/faculty")
 async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionDep, request: Request, data: FacultyFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
@@ -623,6 +723,9 @@ async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionD
 
     if not (comprobante.content_type.startswith("image/") or comprobante.content_type == "application/pdf") or comprobante.size > 5242880:
         raise ValueError("Imagen inválida.")
+
+    if int(data.numero_delegaciones) < 4:
+        raise ValueError("Número de delegaciones inválido.")
 
     # Modelo base de datos
     inscripcion = FacultySM(
