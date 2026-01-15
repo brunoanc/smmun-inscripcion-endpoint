@@ -397,7 +397,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP("smtppro.zoho.com", 587) as smtp:
+    with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
         smtp.login(msg["From"], os.environ["ZOHO_PSWD"])
         smtp.sendmail(msg["From"], destinatarios, msg.as_string())
@@ -566,9 +566,9 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
     #part['Content-Disposition'] = 'attachment; filename="REGLAMENTO_FACULTY_PLACEHOLDER.txt"'
     #msg.attach(part)
 
-    with smtplib.SMTP("smtppro.zoho.com", 587) as smtp:
+    with smtplib.SMTP("smtp.zoho.com", 587) as smtp:
         smtp.starttls()
-        smtp.login(msg["From"], "BZ97NPpWTPLP")
+        smtp.login(msg["From"], os.environ["ZOHO_PSWD"])
         smtp.sendmail(msg["From"], msg["To"], msg.as_string())
 
         # Enviar a finanzas
