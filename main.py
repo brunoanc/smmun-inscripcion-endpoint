@@ -303,7 +303,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     file_metadata = {
         "name": f"{'CODELEGACION' if inscripcion.codelegacion else 'DELEGACION'}_{inscripcion.nombre}_{inscripcion.apellido}_{int(time.time())}{pathlib.Path(cast(str, comprobante.filename)).suffix}",
-        "parents": ["1XfM0CcaGGQAprXQKs1XSoqU4H7SCb7G4"]
+        "parents": ["1RjGzS0voc8o3QF6FwFTEO1IEwkj45JVs"]
     }
 
     media = MediaIoBaseUpload(comprobante.file, mimetype=comprobante.content_type, chunksize=-1)
@@ -367,7 +367,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
     }
 
     service.spreadsheets().values().append(
-        spreadsheetId="1EetaVUgXbNUjZ7K2NloWuH1o5kW7usDZKlO9xVMzyic",
+        spreadsheetId="10V54CqKaXQFwFsFkw0eBpXSDH-MhZ1pXwKJYB1rJoC4",
         range="A1:AG1",
         valueInputOption="USER_ENTERED",
         body=body
@@ -410,7 +410,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
     file_metadata = {
         "name": f"FACULTY_{inscripcion.institucion_delegacion_oficial}_{int(time.time())}{pathlib.Path(cast(str, comprobante.filename)).suffix}",
-        "parents": ["1yhuaWkBRT6rdgUPTCdvfmumay5Fkuowp"]
+        "parents": ["1DgGmdSBUy5XyyhAmwzIgSqHyq63yv9o1"]
     }
 
     media = MediaIoBaseUpload(comprobante.file, mimetype=comprobante.content_type, chunksize=-1)
@@ -430,7 +430,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         }
     }
 
-    service.spreadsheets().batchUpdate(spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg", body=body).execute()
+    service.spreadsheets().batchUpdate(spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE", body=body).execute()
 
     # Añadir valores a la tabla general
     body = {
@@ -452,7 +452,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
     }
 
     service.spreadsheets().values().append(
-        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
         range=f"A1:K1",
         valueInputOption="USER_ENTERED",
         body=body
@@ -535,14 +535,14 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         ])
 
     service.spreadsheets().values().append(
-        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
         range=f"{title}!A1:H1",
         valueInputOption="USER_ENTERED",
         body=body
     ).execute()
 
     service.spreadsheets().values().append(
-        spreadsheetId="19KPTFOSbkflFMvnp4wb4tpMUTS9o0H14nv02q4magBg",
+        spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
         range=f"DELEGACIONES!A1:I1",
         valueInputOption="USER_ENTERED",
         body=delegaciones
