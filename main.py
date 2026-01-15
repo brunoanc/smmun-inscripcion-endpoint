@@ -46,7 +46,7 @@ TIPOS_SOLO_INDIVIDUAL = {"pilotos", "disenadores_emergentes", "astronautas", "re
 COMITES_CON_TIPOS = {"fia", "fhcm", "nasa", "cumbre_futuro"}
 
 # Cargar delegaciones para validaciones cruzadas
-with open("src/lib/data/delegaciones.json", "r", encoding="utf-8") as delegaciones_json:
+with open("delegaciones.json", "r", encoding="utf-8") as delegaciones_json:
     delegaciones_data = json.load(delegaciones_json)
 
 
