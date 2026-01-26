@@ -26,7 +26,7 @@ import json
 import resend
 
 # URL de la página estática
-URL_BASE = "https://smmun0githubio-production.up.railway.app"
+URL_BASE = "https://smmun.com"
 
 # Lista de comités y tipos no permitidos en codelegación
 COMITES_VALIDOS = [
@@ -218,6 +218,7 @@ app.add_middleware(
         "http://localhost",
         "http://localhost:8080",
         "https://smmun.com",
+        "https://www.smmun.com",
         "https://smmun0githubio-production.up.railway.app",
         "https://smmun0.github.io",
         "https://github.io"
