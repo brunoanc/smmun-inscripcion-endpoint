@@ -371,7 +371,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     service.spreadsheets().values().append(
         spreadsheetId="10V54CqKaXQFwFsFkw0eBpXSDH-MhZ1pXwKJYB1rJoC4",
-        range="A1:AG1",
+        range="A:A",
         valueInputOption="USER_ENTERED",
         body=body
     ).execute()
@@ -456,7 +456,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
     service.spreadsheets().values().append(
         spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
-        range=f"A1:K1",
+        range=f"A:A",
         valueInputOption="USER_ENTERED",
         body=body
     ).execute()
@@ -539,14 +539,14 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
     service.spreadsheets().values().append(
         spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
-        range=f"{title}!A1:H1",
+        range=f"{title}!A:A",
         valueInputOption="USER_ENTERED",
         body=body
     ).execute()
 
     service.spreadsheets().values().append(
         spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
-        range=f"DELEGACIONES!A1:I1",
+        range=f"DELEGACIONES!A:A",
         valueInputOption="USER_ENTERED",
         body=delegaciones
     ).execute()
