@@ -462,30 +462,41 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
     service.spreadsheets().batchUpdate(spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE", body=body).execute()
 
-    # Añadir valores a la tabla general
-    body = {
-        "values": [
-            [
-                False,
-                inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
-                inscripcion.institucion_delegacion_oficial,
-                inscripcion.numero_delegaciones,
-                inscripcion.nombre_faculty,
-                inscripcion.apellido_faculty,
-                f"'{inscripcion.celular_faculty}",
-                inscripcion.correo_faculty,
-                inscripcion.pais_faculty,
-                inscripcion.ciudad_estado_faculty,
-                link_comprobante
-            ]
+    # Añadir al sheets de inscripciones
+    row_values = [
+        False,
+        inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
+        inscripcion.institucion_delegacion_oficial,
+        inscripcion.numero_delegaciones,
+        inscripcion.nombre_faculty,
+        inscripcion.apellido_faculty,
+        f"'{inscripcion.celular_faculty}",
+        inscripcion.correo_faculty,
+        inscripcion.pais_faculty,
+        inscripcion.ciudad_estado_faculty,
+        link_comprobante
+    ]
+
+    append_cells_request = {
+        "requests": [
+            {
+                "appendCells": {
+                    "tableId": "2079575764",
+                    "rows": [
+                        {
+                            "values": [cell(v) for v in row_values]
+                        }
+                    ],
+                    "fields": "*",
+                    "sheetId": "0"
+                }
+            }
         ]
     }
 
-    service.spreadsheets().values().append(
+    service.spreadsheets().batchUpdate(
         spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
-        range=f"A:A",
-        valueInputOption="USER_ENTERED",
-        body=body
+        body=append_cells_request
     ).execute()
 
     # Añadir valores al sheets
@@ -536,9 +547,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         ]
     }
 
-    delegaciones = {
-        "values": []
-    }
+    delegaciones = []
 
     for i in range(inscripcion.numero_delegaciones):
         body["values"].append([
@@ -552,7 +561,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
             data.get(f"escuela_d{i}")
         ])
 
-        delegaciones["values"].append([
+        delegaciones_row = [
             inscripcion.institucion_delegacion_oficial,
             data.get(f"nombre_d{i}"),
             data.get(f"apellido_d{i}"),
@@ -562,7 +571,11 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
             f"{data.get(f'ciudad_estado_d{i}')}, {data.get(f'pais_d{i}')}",
             data.get(f"escolaridad_d{i}"),
             data.get(f"escuela_d{i}")
-        ])
+        ]
+
+        delegaciones.append({
+            "values": [cell(v) for v in row]
+        })
 
     service.spreadsheets().values().append(
         spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
@@ -571,11 +584,22 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         body=body
     ).execute()
 
-    service.spreadsheets().values().append(
+    append_cells_request = {
+        "requests": [
+            {
+                "appendCells": {
+                    "tableId": "1297311155",
+                    "rows": delegaciones,
+                    "fields": "*",
+                    "sheetId": "399805608"
+                }
+            }
+        ]
+    }
+
+    service.spreadsheets().batchUpdate(
         spreadsheetId="118vacPNUVHQ2OmEWYsL9qSPxkdrvMTscn2kQRGlNDAE",
-        range=f"DELEGACIONES!A:A",
-        valueInputOption="USER_ENTERED",
-        body=delegaciones
+        body=append_cells_request
     ).execute()
 
     resend.Emails.send({
