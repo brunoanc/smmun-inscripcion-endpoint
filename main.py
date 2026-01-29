@@ -574,7 +574,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
         ]
 
         delegaciones.append({
-            "values": [cell(v) for v in row]
+            "values": [cell(v) for v in delegaciones_row]
         })
 
     service.spreadsheets().values().append(
