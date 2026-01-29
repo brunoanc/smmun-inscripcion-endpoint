@@ -391,7 +391,8 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
                             "values": [cell(v) for v in row_values]
                         }
                     ],
-                    "fields": "*"
+                    "fields": "*",
+                    "sheetId": "1743848330"
                 }
             }
         ]
