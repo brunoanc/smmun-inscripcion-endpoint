@@ -567,7 +567,7 @@ def manejar_inscripcion_faculty(inscripcion: FacultySM, data: FormData, comproba
 
 
 # Endpoint para el forms
-@router.post("/api/registro/delegaciones")
+@router.post("/registro/delegaciones")
 def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: DelegacionFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
@@ -705,7 +705,7 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
     # Redirigir a página de confirmación
     return RedirectResponse(f"{URL_BASE}/registro/confirmacion/", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.post("/api/registro/faculty")
+@router.post("/registro/faculty")
 async def registrar_faculty(background_tasks: BackgroundTasks, session: SessionDep, request: Request, data: FacultyFormData = Depends(), comprobante: UploadFile = File(...)):
     # Validar archivo
     if comprobante.content_type is None or comprobante.size is None:
