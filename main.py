@@ -330,7 +330,7 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     # Añadir al sheets de inscripciones
     service = build("sheets", "v4", credentials=google_credentials)
-    row_values: [
+    row_values = [
         False,
 
         inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
