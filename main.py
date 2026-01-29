@@ -272,6 +272,22 @@ def comite_corto_a_largo(comite):
             return comite
 
 
+def cell(value):
+    if value is None:
+        return {}
+
+    if isinstance(value, bool):
+        return {"userEnteredValue": {"boolValue": value}}
+
+    if isinstance(value, int):
+        return {"userEnteredValue": {"numberValue": value}}
+
+    if isinstance(value, float):
+        return {"userEnteredValue": {"numberValue": value}}
+
+    return {"userEnteredValue": {"stringValue": str(value)}}
+
+
 def normalizar_comite(siglas: str) -> str:
     texto = unicodedata.normalize("NFD", siglas)
     texto = "".join(ch for ch in texto if unicodedata.category(ch) != "Mn")
@@ -314,66 +330,76 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
 
     # Añadir al sheets de inscripciones
     service = build("sheets", "v4", credentials=google_credentials)
-    body = {
-        "values": [
-            [
-                False,
+    row_values: [
+        False,
 
-                inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
+        inscripcion.fecha.strftime(r"%d/%m/%Y, %H:%M:%S"),
 
-                inscripcion.codelegacion,
-                inscripcion.delegacion_oficial,
-                inscripcion.responsable_delegacion_oficial,
+        inscripcion.codelegacion,
+        inscripcion.delegacion_oficial,
+        inscripcion.responsable_delegacion_oficial,
 
-                inscripcion.nombre,
-                inscripcion.apellido,
-                inscripcion.edad,
-                f"'{inscripcion.celular}",
-                inscripcion.correo,
-                inscripcion.pais,
-                inscripcion.ciudad_estado,
-                inscripcion.escolaridad,
-                inscripcion.escuela,
-                inscripcion.contacto_emergencia,
-                inscripcion.info_extra,
+        inscripcion.nombre,
+        inscripcion.apellido,
+        inscripcion.edad,
+        f"'{inscripcion.celular}",
+        inscripcion.correo,
+        inscripcion.pais,
+        inscripcion.ciudad_estado,
+        inscripcion.escolaridad,
+        inscripcion.escuela,
+        inscripcion.contacto_emergencia,
+        inscripcion.info_extra,
 
-                inscripcion.nombre_co,
-                inscripcion.apellido_co,
-                inscripcion.edad_co,
-                f"'{inscripcion.celular_co}",
-                inscripcion.correo_co,
-                inscripcion.pais_co,
-                inscripcion.ciudad_estado_co,
-                inscripcion.escolaridad_co,
-                inscripcion.escuela_co,
-                inscripcion.contacto_emergencia_co,
-                inscripcion.info_extra_co,
+        inscripcion.nombre_co,
+        inscripcion.apellido_co,
+        inscripcion.edad_co,
+        f"'{inscripcion.celular_co}",
+        inscripcion.correo_co,
+        inscripcion.pais_co,
+        inscripcion.ciudad_estado_co,
+        inscripcion.escolaridad_co,
+        inscripcion.escuela_co,
+        inscripcion.contacto_emergencia_co,
+        inscripcion.info_extra_co,
 
-                inscripcion.comite_1,
-                inscripcion.comite_1_opcion_1,
-                inscripcion.comite_1_opcion_2,
-                inscripcion.comite_1_opcion_3,
+        inscripcion.comite_1,
+        inscripcion.comite_1_opcion_1,
+        inscripcion.comite_1_opcion_2,
+        inscripcion.comite_1_opcion_3,
 
-                inscripcion.comite_2,
-                inscripcion.comite_2_opcion_1,
-                inscripcion.comite_2_opcion_2,
-                inscripcion.comite_2_opcion_3,
+        inscripcion.comite_2,
+        inscripcion.comite_2_opcion_1,
+        inscripcion.comite_2_opcion_2,
+        inscripcion.comite_2_opcion_3,
 
-                inscripcion.comite_3,
-                inscripcion.comite_3_opcion_1,
-                inscripcion.comite_3_opcion_2,
-                inscripcion.comite_3_opcion_3,
+        inscripcion.comite_3,
+        inscripcion.comite_3_opcion_1,
+        inscripcion.comite_3_opcion_2,
+        inscripcion.comite_3_opcion_3,
 
-                f"https://drive.google.com/file/d/{file.get('id')}"
-            ]
+        f"https://drive.google.com/file/d/{file.get('id')}"
+    ]
+
+    append_cells_request = {
+        "requests": [
+            {
+                "appendCells": {
+                    "tableId": "1509385248",
+                    "rows": [
+                        {
+                            "values": [cell(v) for v in row_values]
+                        }
+                    ],
+                    "fields": "*"
+                }
+            }
         ]
     }
 
-    service.spreadsheets().values().append(
+    service.spreadsheets().batchUpdate(
         spreadsheetId="10V54CqKaXQFwFsFkw0eBpXSDH-MhZ1pXwKJYB1rJoC4",
-        range="A:A",
-        valueInputOption="USER_ENTERED",
-        body=body
+        body=append_cells_request
     ).execute()
 
     # Mandar correo
