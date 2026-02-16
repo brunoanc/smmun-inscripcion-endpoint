@@ -68,6 +68,8 @@ class DelegacionFormData:
     ciudad_estado_0: str = Form(max_length=150)
     escolaridad_0: str = Form(pattern=r"^(Secundaria|Preparatoria|Universidad|Egresado|No estudio)$", max_length=150)
     escuela_0: Optional[str] = Form(None, max_length=150)
+    matricula_0: Optional[str] = Form(None, max_length=8)
+    grado_seccion_0: Optional[str] = Form(None, max_length=150)
     nombre_contacto_0: str = Form(max_length=150)
     celular_contacto_0: str = Form(max_length=30)
     relacion_contacto_0: str = Form(max_length=150)
@@ -82,6 +84,8 @@ class DelegacionFormData:
     ciudad_estado_1: Optional[str] = Form(None, max_length=150)
     escolaridad_1: Optional[str] = Form(None, pattern=r"^(|Secundaria|Preparatoria|Universidad|Egresado|No estudio)$", max_length=150)
     escuela_1: Optional[str] = Form(None, max_length=150)
+    matricula_1: Optional[str] = Form(None, max_length=8)
+    grado_seccion_1: Optional[str] = Form(None, max_length=150)
     nombre_contacto_1: Optional[str] = Form(None, max_length=150)
     celular_contacto_1: Optional[str] = Form(None, max_length=30)
     relacion_contacto_1: Optional[str] = Form(None, max_length=150)
@@ -132,6 +136,8 @@ class DelegacionSM(SQLModel, table=True): # type: ignore
     ciudad_estado: str
     escolaridad: str
     escuela: str | None
+    matricula: int | None
+    grado_seccion: str | None
     contacto_emergencia: str
     info_extra: str | None
 
@@ -144,6 +150,8 @@ class DelegacionSM(SQLModel, table=True): # type: ignore
     ciudad_estado_co: str | None
     escolaridad_co: str | None
     escuela_co: str | None
+    matricula_co: int | None
+    grado_seccion_co: str | None
     contacto_emergencia_co: str | None
     info_extra_co: str | None
 
@@ -378,7 +386,12 @@ def manejar_inscripcion(inscripcion: DelegacionSM, comprobante: UploadFile):
         inscripcion.comite_3_opcion_2,
         inscripcion.comite_3_opcion_3,
 
-        f"https://drive.google.com/file/d/{file.get('id')}"
+        f"https://drive.google.com/file/d/{file.get('id')}",
+
+        inscripcion.matricula,
+        inscripcion.grado_seccion,
+        inscripcion.matricula_co,
+        inscripcion.grado_seccion_co
     ]
 
     append_cells_request = {
@@ -714,6 +727,8 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         ciudad_estado=data.ciudad_estado_0,
         escolaridad=data.escolaridad_0,
         escuela=data.escuela_0 or "No aplica",
+        matricula=int(cast(str, data.matricula_0)),
+        grado_seccion=data.grado_seccion_0,
         contacto_emergencia=f"{data.nombre_contacto_0} ({data.relacion_contacto_0}): {data.celular_contacto_0}",
         info_extra=data.info_extra_0,
 
@@ -726,6 +741,8 @@ def registrar(background_tasks: BackgroundTasks, session: SessionDep, data: Dele
         ciudad_estado_co=data.ciudad_estado_1 if es_codelegacion else None,
         escolaridad_co=data.escolaridad_1 if es_codelegacion else None,
         escuela_co=(data.escuela_1 or "No aplica") if es_codelegacion else None,
+        matricula_co=int(cast(str, data.matricula_1)) if es_codelegacion else None,
+        grado_seccion_co=data.grado_seccion_1 if es_codelegacion else None,
         contacto_emergencia_co=f"{data.nombre_contacto_1} ({data.relacion_contacto_1}): {data.celular_contacto_1}" if es_codelegacion else None,
         info_extra_co=data.info_extra_1 if es_codelegacion and data.info_extra_1 else None,
 
